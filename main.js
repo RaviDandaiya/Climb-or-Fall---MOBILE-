@@ -97,11 +97,16 @@ class Game {
     }
 
     loop() {
-        if (!this.isGameOver && this.player) {
-            Engine.update(this.engine, 16.666);
-            this.update();
+        try {
+            if (!this.isGameOver && this.player) {
+                Engine.update(this.engine, 16.666);
+                this.update();
+            }
+            requestAnimationFrame(() => this.loop());
+        } catch (err) {
+            console.error(err);
+            alert("GAME ERROR: " + err.message);
         }
-        requestAnimationFrame(() => this.loop());
     }
 
     setupEventListeners() {
@@ -271,8 +276,12 @@ class Game {
 
     checkCollisions() {
         if (!this.player) return;
-        const collisions = Matter.Query.colliding(this.player, Composite.allBodies(this.world));
+
+        // Fix: Use correct Matter.js API 'collides'
+        const collisions = Matter.Query.collides(this.player, Composite.allBodies(this.world));
+
         collisions.forEach(collision => {
+            // collides returns objects with { bodyA, bodyB }
             if (collision.bodyA.label === 'coin' || collision.bodyB.label === 'coin') {
                 const coin = collision.bodyA.label === 'coin' ? collision.bodyA : collision.bodyB;
                 this.collectCoin(coin);
