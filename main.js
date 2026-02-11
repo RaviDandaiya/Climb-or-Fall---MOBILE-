@@ -125,14 +125,20 @@ class Game {
         this.lavaSpeed = settings.lavaSpeed;
         this.lavaHeight = CONFIG.canvasHeight + 400;
         this.revivesLeft = 1;
+        this.isGameOver = false; // Must be false BEFORE generation
 
         document.getElementById('difficulty-screen').classList.add('hidden');
+
+        // Clear existing world
+        World.clear(this.world);
+        Engine.clear(this.engine);
+        this.platforms = [];
+        this.particles = [];
 
         this.createPlayer();
         this.createStartPlatform();
         this.generateInitialPlatforms(settings);
 
-        this.isGameOver = false;
         Render.run(this.render);
         Runner.run(this.runner, this.engine);
     }
