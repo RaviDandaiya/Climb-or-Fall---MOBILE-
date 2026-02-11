@@ -4,9 +4,10 @@ const CONFIG = {
     canvasWidth: window.innerWidth,
     canvasHeight: window.innerHeight,
     playerRadius: 18,
-    jumpForce: -20, // GOD MODE JUMP
-    moveSpeed: 7.5,  // Fast movement for better reach
-    maxHorizontalVelocity: 9, // Slightly higher cap
+    playerRadius: 18,
+    jumpForce: -24, // ULTRA JUMP
+    moveSpeed: 8.0,  // Even faster to match jump height
+    maxHorizontalVelocity: 11,
     platformWidth: 140,
     platformHeight: 25,
 };
@@ -357,16 +358,16 @@ class Game {
         if ((this.keys['Space'] || this.keys['ArrowUp'] || this.keys['KeyW']) && onGround && !this.jumpDebounce) {
             Body.setVelocity(this.player, { x: this.player.velocity.x, y: jumpForce });
 
-            // JUMP VISUALS
+            // MASSIVE EXPLOSION EFFECT
             this.createExplosion(
                 { x: this.player.position.x, y: this.player.position.y + 20 },
                 '#ffffff',
-                15
+                30 // Double particles
             );
             this.createExplosion(
                 { x: this.player.position.x, y: this.player.position.y + 20 },
                 this.activeSkinId ? SKINS.find(s => s.id === this.activeSkinId).color : '#9d00ff',
-                10
+                20 // Double particles
             );
 
             this.jumpDebounce = true;
