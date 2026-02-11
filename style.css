@@ -253,16 +253,21 @@ body {
 .logo-text {
   font-family: var(--font-horror);
   color: var(--accent-red);
-  font-size: 2.5rem;
-  line-height: 0.9;
+  font-size: 3.5rem;
+  line-height: 0.8;
+  text-shadow: 0 0 20px rgba(255, 62, 62, 0.4);
+  pointer-events: none;
 }
 
 .logo-text span {
   font-family: var(--font-main);
   color: #fff;
-  font-size: 0.9rem;
-  letter-spacing: 5px;
-  font-weight: 800;
+  font-size: 1.2rem;
+  letter-spacing: 8px;
+  font-weight: 900;
+  display: block;
+  margin-top: 5px;
+  text-transform: uppercase;
 }
 
 .menu-btn {

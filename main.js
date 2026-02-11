@@ -120,7 +120,6 @@ class Game {
         const settings = DIFFICULTY_SETTINGS[diff];
         this.lavaSpeed = settings.lavaSpeed;
         this.lavaHeight = CONFIG.canvasHeight + 400;
-        this.isGameOver = false;
         this.revivesLeft = 1;
 
         document.getElementById('difficulty-screen').classList.add('hidden');
@@ -129,6 +128,7 @@ class Game {
         this.createStartPlatform();
         this.generateInitialPlatforms(settings);
 
+        this.isGameOver = false;
         Render.run(this.render);
         Runner.run(this.runner, this.engine);
     }
@@ -217,7 +217,8 @@ class Game {
     }
 
     checkCollisions() {
-        const collisions = Matter.Query.colliding(this.player, World.allBodies(this.world));
+        if (!this.player) return;
+        const collisions = Matter.Query.colliding(this.player, Composite.allBodies(this.world));
         collisions.forEach(collision => {
             if (collision.bodyA.label === 'coin' || collision.bodyB.label === 'coin') {
                 const coin = collision.bodyA.label === 'coin' ? collision.bodyA : collision.bodyB;
