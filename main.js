@@ -13,9 +13,9 @@ const CONFIG = {
 };
 
 const DIFFICULTY_SETTINGS = {
-    easy: { lavaSpeed: 0.35, platformWidth: 180, gapHeight: 110, hazardChance: 0.0, movingChance: 0.1 },
-    medium: { lavaSpeed: 0.45, platformWidth: 160, gapHeight: 120, hazardChance: 0.04, movingChance: 0.25 },
-    hard: { lavaSpeed: 0.75, platformWidth: 130, gapHeight: 140, hazardChance: 0.12, movingChance: 0.5 }
+    easy: { lavaSpeed: 0.25, platformWidth: 200, gapHeight: 110, hazardChance: 0.0, movingChance: 0.1 },
+    medium: { lavaSpeed: 0.35, platformWidth: 170, gapHeight: 120, hazardChance: 0.04, movingChance: 0.25 },
+    hard: { lavaSpeed: 0.55, platformWidth: 140, gapHeight: 135, hazardChance: 0.1, movingChance: 0.5 }
 };
 
 const SKINS = [
@@ -161,15 +161,19 @@ class Game {
 
     addPlatform(y, index) {
         const settings = DIFFICULTY_SETTINGS[this.difficulty];
-        const isPillar = Math.random() < 0.3;
+        const isPillar = Math.random() < 0.25;
+
+        // Prevent infinite spawning by ensuring we don't spawn too many in one update
+        const highestSoFar = this.platforms.reduce((min, p) => Math.min(min, p.position.y), Infinity);
+        if (y > highestSoFar - 50) return;
 
         if (isPillar) {
-            const height = 150 + Math.random() * 100;
-            const x = Math.random() * (CONFIG.canvasWidth - 60) + 30;
-            const pillar = Bodies.rectangle(x, y, 30, height, {
+            const height = 180 + Math.random() * 120;
+            const x = Math.random() * (CONFIG.canvasWidth - 100) + 50;
+            const pillar = Bodies.rectangle(x, y - height / 2, 40, height, {
                 isStatic: true,
                 label: 'platform',
-                render: { fillStyle: '#2d3436', strokeStyle: '#9d00ff', lineWidth: 2 }
+                render: { fillStyle: '#2d3436', strokeStyle: '#9d00ff', lineWidth: 3 }
             });
             this.platforms.push(pillar);
             World.add(this.world, pillar);
@@ -185,8 +189,7 @@ class Game {
             this.platforms.push(platform);
             World.add(this.world, platform);
 
-            // Spawn Coins
-            if (!isHazard && Math.random() < 0.2) {
+            if (!isHazard && Math.random() < 0.15) {
                 this.addCoin(x, y - 40);
             }
         }
@@ -285,8 +288,9 @@ class Game {
     }
 
     checkWallContact() {
+        if (!this.player) return false;
         const bodies = Composite.allBodies(this.world).filter(b => b.label === 'platform');
-        const sideOffsets = [-CONFIG.playerRadius - 5, CONFIG.playerRadius + 5];
+        const sideOffsets = [-CONFIG.playerRadius - 10, CONFIG.playerRadius + 10]; // Increased range
         return sideOffsets.some(offset => Matter.Query.ray(bodies, this.player.position, { x: this.player.position.x + offset, y: this.player.position.y }).length > 0);
     }
 
@@ -478,9 +482,14 @@ class Game {
     }
 
     cullAndGeneratePlatforms() {
+        if (!this.player) return;
         const settings = DIFFICULTY_SETTINGS[this.difficulty];
         const highest = this.platforms.reduce((min, p) => Math.min(min, p.position.y), Infinity);
-        if (this.player.position.y < highest + 800) this.addPlatform(highest - (settings.gapHeight / 1.5), this.platforms.length);
+
+        // Only spawn if we are getting close to the top edge and NOT infinitely loop
+        if (this.player.position.y < highest + 600) {
+            this.addPlatform(highest - (settings.gapHeight), this.platforms.length);
+        }
     }
 
     handleResize() {
