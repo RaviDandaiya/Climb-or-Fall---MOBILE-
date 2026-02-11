@@ -21,18 +21,18 @@ const DIFFICULTY_SETTINGS = {
         movingChance: 0.1,
     },
     medium: {
-        lavaSpeed: 0.65,
-        platformWidth: 140,
-        gapHeight: 130,
-        hazardChance: 0.08,
-        movingChance: 0.3,
+        lavaSpeed: 0.45,
+        platformWidth: 160,
+        gapHeight: 120,
+        hazardChance: 0.04,
+        movingChance: 0.25,
     },
     hard: {
-        lavaSpeed: 1.1,
-        platformWidth: 110,
-        gapHeight: 155,
-        hazardChance: 0.25,
-        movingChance: 0.6,
+        lavaSpeed: 0.75,
+        platformWidth: 130,
+        gapHeight: 140,
+        hazardChance: 0.12,
+        movingChance: 0.5,
     }
 };
 
