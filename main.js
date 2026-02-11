@@ -4,10 +4,9 @@ const CONFIG = {
     canvasWidth: window.innerWidth,
     canvasHeight: window.innerHeight,
     playerRadius: 18,
-    jumpForce: 0.015,
-    moveForce: 0.05, // Increased for responsiveness
+    jumpForce: -13, // Direct velocity value
+    moveSpeed: 6.5,  // Direct velocity value
     maxHorizontalVelocity: 8,
-    dashForce: 0.1,
     platformWidth: 140,
     platformHeight: 25,
 };
@@ -135,9 +134,10 @@ class Game {
 
     createPlayer() {
         this.player = Bodies.circle(CONFIG.canvasWidth / 2, CONFIG.canvasHeight - 150, CONFIG.playerRadius, {
-            friction: 0.1,
-            frictionAir: 0.02,
-            restitution: 0.05,
+            friction: 0.01,
+            frictionAir: 0.01,
+            restitution: 0,
+            inertia: Infinity, // Prevent character from rolling
             label: 'player',
             render: { visible: false }
         });
@@ -273,16 +273,23 @@ class Game {
         }
 
         if (!this.isClimbing) {
+            let moveX = 0;
             if (this.keys['ArrowLeft'] || this.keys['KeyA']) {
-                Body.applyForce(this.player, this.player.position, { x: -CONFIG.moveForce, y: 0 });
+                moveX = -CONFIG.moveSpeed;
+            } else if (this.keys['ArrowRight'] || this.keys['KeyD']) {
+                moveX = CONFIG.moveSpeed;
             }
-            if (this.keys['ArrowRight'] || this.keys['KeyD']) {
-                Body.applyForce(this.player, this.player.position, { x: CONFIG.moveForce, y: 0 });
+
+            if (moveX !== 0) {
+                Body.setVelocity(this.player, { x: moveX, y: velocity.y });
+            } else {
+                // Apply a bit of friction-like slowdown when no keys are pressed
+                Body.setVelocity(this.player, { x: velocity.x * 0.85, y: velocity.y });
             }
         }
 
         if ((this.keys['Space'] || this.keys['ArrowUp'] || this.keys['KeyW']) && onGround && !this.jumpDebounce && !this.isClimbing) {
-            Body.setVelocity(this.player, { x: velocity.x, y: -18.5 });
+            Body.setVelocity(this.player, { x: velocity.x, y: CONFIG.jumpForce });
             this.jumpDebounce = true;
             setTimeout(() => this.jumpDebounce = false, 180);
         }
