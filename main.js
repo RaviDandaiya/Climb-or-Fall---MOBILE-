@@ -102,7 +102,12 @@ class Game {
         // Ad Revive
         document.getElementById('ad-revive-btn').onclick = () => this.startAdRevive();
 
-        window.addEventListener('keydown', (e) => this.keys[e.code] = true);
+        window.addEventListener('keydown', (e) => {
+            this.keys[e.code] = true;
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+                e.preventDefault();
+            }
+        });
         window.addEventListener('keyup', (e) => this.keys[e.code] = false);
         window.addEventListener('resize', () => this.handleResize());
     }
@@ -260,38 +265,47 @@ class Game {
     }
 
     handleInput() {
-        if (!this.player) return;
-        const onGround = this.checkGrounded();
-        const wallHit = this.checkWallContact();
-        const velocity = this.player.velocity;
+        if (!this.player || this.isGameOver) return;
 
-        if (wallHit && (this.keys['ArrowUp'] || this.keys['KeyW'])) {
-            this.isClimbing = true;
-            Body.setVelocity(this.player, { x: velocity.x, y: -4 });
+        const velocity = this.player.velocity;
+        // Ensure CONFIG values are present
+        const speed = (CONFIG && CONFIG.moveSpeed) ? CONFIG.moveSpeed : 6.5;
+        const jump = (CONFIG && CONFIG.jumpForce) ? CONFIG.jumpForce : -13;
+
+        const onGround = this.checkGrounded();
+
+        let moveX = 0;
+        if (this.keys['ArrowLeft'] || this.keys['KeyA']) {
+            moveX = -speed;
+        } else if (this.keys['ArrowRight'] || this.keys['KeyD']) {
+            moveX = speed;
+        }
+
+        // Apply Horizontal Velocity (preserve Vertical)
+        if (moveX !== 0) {
+            Body.setVelocity(this.player, { x: moveX, y: velocity.y });
+        } else {
+            // Apply slight friction damping
+            Body.setVelocity(this.player, { x: velocity.x * 0.9, y: velocity.y });
+        }
+
+        // Jump Logic
+        if ((this.keys['Space'] || this.keys['ArrowUp'] || this.keys['KeyW']) && onGround && !this.jumpDebounce) {
+            Body.setVelocity(this.player, { x: this.player.velocity.x, y: jump });
+            this.jumpDebounce = true;
+            setTimeout(() => this.jumpDebounce = false, 250);
+        }
+
+        // Wall Climb Safety
+        if (this.checkWallContact()) {
+            if (this.keys['ArrowUp'] || this.keys['KeyW']) {
+                this.isClimbing = true;
+                Body.setVelocity(this.player, { x: velocity.x, y: -5 });
+            } else {
+                this.isClimbing = false;
+            }
         } else {
             this.isClimbing = false;
-        }
-
-        if (!this.isClimbing) {
-            let moveX = 0;
-            if (this.keys['ArrowLeft'] || this.keys['KeyA']) {
-                moveX = -CONFIG.moveSpeed;
-            } else if (this.keys['ArrowRight'] || this.keys['KeyD']) {
-                moveX = CONFIG.moveSpeed;
-            }
-
-            if (moveX !== 0) {
-                Body.setVelocity(this.player, { x: moveX, y: velocity.y });
-            } else {
-                // Apply a bit of friction-like slowdown when no keys are pressed
-                Body.setVelocity(this.player, { x: velocity.x * 0.85, y: velocity.y });
-            }
-        }
-
-        if ((this.keys['Space'] || this.keys['ArrowUp'] || this.keys['KeyW']) && onGround && !this.jumpDebounce && !this.isClimbing) {
-            Body.setVelocity(this.player, { x: velocity.x, y: CONFIG.jumpForce });
-            this.jumpDebounce = true;
-            setTimeout(() => this.jumpDebounce = false, 180);
         }
     }
 
