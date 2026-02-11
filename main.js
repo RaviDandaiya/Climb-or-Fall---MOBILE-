@@ -241,12 +241,15 @@ class Game {
         this.handleInput();
         this.updateStats();
         this.updateWorld();
-        this.updateParticles();
         this.checkCollisions();
-        this.checkFall();
         this.cullAndGeneratePlatforms();
 
         if (this.shake > 0) this.shake *= 0.9;
+
+        // Simple fall check
+        if (this.player && this.player.position.y > this.lavaHeight + 600) {
+            this.triggerDeath("FELL INTO THE ABYSS");
+        }
     }
 
     checkCollisions() {
