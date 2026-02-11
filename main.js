@@ -4,7 +4,7 @@ const CONFIG = {
     canvasWidth: window.innerWidth,
     canvasHeight: window.innerHeight,
     playerRadius: 18,
-    jumpForce: -18, // Extra high jump
+    jumpForce: -20, // GOD MODE JUMP
     moveSpeed: 6.5,  // Direct velocity value
     maxHorizontalVelocity: 8,
     platformWidth: 140,
@@ -533,12 +533,14 @@ class Game {
 
         if (this.player) ctx.rotate(this.player.angle);
 
-        // Exaggerated Squash and Stretch Animation (2x stronger)
+        // SUPER EXAGGERATED SQUASH
         const velocity = this.player.velocity.y;
         let scaleX = 1, scaleY = 1;
-        if (Math.abs(velocity) > 1) {
-            scaleX = 1 - Math.min(Math.abs(velocity) * 0.04, 0.4); // More extreme
-            scaleY = 1 + Math.min(Math.abs(velocity) * 0.04, 0.4);
+        // Simple, linear stretch based on speed
+        if (Math.abs(velocity) > 0.5) {
+            const stretch = Math.min(Math.abs(velocity) * 0.05, 0.4);
+            scaleX = 1 - stretch;
+            scaleY = 1 + stretch;
         }
         ctx.scale(scaleX, scaleY);
 
