@@ -5,8 +5,8 @@ const CONFIG = {
     canvasHeight: window.innerHeight,
     playerRadius: 18,
     jumpForce: -20, // GOD MODE JUMP
-    moveSpeed: 6.5,  // Direct velocity value
-    maxHorizontalVelocity: 8,
+    moveSpeed: 7.5,  // Fast movement for better reach
+    maxHorizontalVelocity: 9, // Slightly higher cap
     platformWidth: 140,
     platformHeight: 25,
 };
@@ -353,9 +353,22 @@ class Game {
             Body.setVelocity(this.player, { x: velocity.x * 0.8, y: velocity.y });
         }
 
-        // Jump Logic (with debounce)
+        // JUMP: Precise Trigger + VISUALS
         if ((this.keys['Space'] || this.keys['ArrowUp'] || this.keys['KeyW']) && onGround && !this.jumpDebounce) {
             Body.setVelocity(this.player, { x: this.player.velocity.x, y: jumpForce });
+
+            // JUMP VISUALS
+            this.createExplosion(
+                { x: this.player.position.x, y: this.player.position.y + 20 },
+                '#ffffff',
+                15
+            );
+            this.createExplosion(
+                { x: this.player.position.x, y: this.player.position.y + 20 },
+                this.activeSkinId ? SKINS.find(s => s.id === this.activeSkinId).color : '#9d00ff',
+                10
+            );
+
             this.jumpDebounce = true;
             setTimeout(() => this.jumpDebounce = false, 200);
         }
@@ -564,6 +577,20 @@ class Game {
             ctx.beginPath(); ctx.arc(pt.x, pt.y + this.cameraY, 4, 0, Math.PI * 2); ctx.fill();
             ctx.globalAlpha = 1;
         });
+    }
+
+    createExplosion(pos, color, count) {
+        for (let i = 0; i < count; i++) {
+            this.particles.push({
+                x: pos.x,
+                y: pos.y,
+                vx: (Math.random() - 0.5) * 10,
+                vy: (Math.random() - 0.5) * 10,
+                life: 1.0,
+                color: color,
+                size: Math.random() * 6 + 2
+            });
+        }
     }
 
     createParticles(pos, color, count) {
