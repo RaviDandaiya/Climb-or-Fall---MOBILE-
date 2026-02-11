@@ -55,6 +55,24 @@ body {
   z-index: 100;
 }
 
+.logo-text {
+  font-family: var(--font-horror);
+  font-size: 1.8rem;
+  line-height: 1;
+  color: var(--accent-red);
+  text-shadow: 0 0 10px rgba(255, 62, 62, 0.5);
+  margin-bottom: 5px;
+  letter-spacing: 2px;
+}
+
+.logo-text span {
+  font-family: var(--font-main);
+  font-size: 0.8rem;
+  color: #fff;
+  letter-spacing: 4px;
+  font-weight: 800;
+}
+
 .stat-card {
   background: var(--glass-bg);
   backdrop-filter: blur(20px);

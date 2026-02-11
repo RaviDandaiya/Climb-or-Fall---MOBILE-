@@ -376,14 +376,14 @@ class Game {
         const time = this.engine.timing.timestamp * 0.002;
 
         ctx.save();
-        ctx.fillStyle = `rgba(20, 20, 25, ${0.4 + Math.sin(time) * 0.12})`; // Reduced lava glow
-        ctx.shadowBlur = 50;
-        ctx.shadowColor = '#1e1e26';
+        ctx.fillStyle = `rgba(255, 30, 0, ${0.5 + Math.sin(time) * 0.15})`; // Back to Red Lava
+        ctx.shadowBlur = 60;
+        ctx.shadowColor = '#ff2200';
         ctx.fillRect(0, lavaY, CONFIG.canvasWidth, 3000);
 
         ctx.beginPath();
-        ctx.strokeStyle = '#333';
-        ctx.lineWidth = 8;
+        ctx.strokeStyle = '#ff4400';
+        ctx.lineWidth = 10;
         for (let i = 0; i <= CONFIG.canvasWidth; i += 25) {
             const wave = Math.sin(time + i * 0.015) * 18;
             ctx.lineTo(i, lavaY + wave);
