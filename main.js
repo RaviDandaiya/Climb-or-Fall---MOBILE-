@@ -5,9 +5,9 @@ const CONFIG = {
     canvasHeight: window.innerHeight,
     playerRadius: 18,
     jumpForce: 0.015,
-    moveForce: 0.002,
-    maxHorizontalVelocity: 6,
-    dashForce: 0.06,
+    moveForce: 0.05, // Increased for responsiveness
+    maxHorizontalVelocity: 8,
+    dashForce: 0.1,
     platformWidth: 140,
     platformHeight: 25,
 };
@@ -163,9 +163,10 @@ class Game {
         const settings = DIFFICULTY_SETTINGS[this.difficulty];
         const isPillar = Math.random() < 0.25;
 
-        // Prevent infinite spawning by ensuring we don't spawn too many in one update
+        // Prevent infinite spawning
+        if (this.isGameOver) return;
         const highestSoFar = this.platforms.reduce((min, p) => Math.min(min, p.position.y), Infinity);
-        if (y > highestSoFar - 50) return;
+        if (y > highestSoFar - 40) return;
 
         if (isPillar) {
             const height = 180 + Math.random() * 120;
@@ -443,7 +444,7 @@ class Game {
         ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(-25, armWave + (this.isClimbing ? -15 : 10)); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(25, -armWave + (this.isClimbing ? -15 : 10)); ctx.stroke();
 
-        ctx.rotate(this.player.angle);
+        if (this.player) ctx.rotate(this.player.angle);
         ctx.fillStyle = '#050508';
         ctx.beginPath(); ctx.arc(0, 0, CONFIG.playerRadius, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = skin.color;

@@ -257,6 +257,11 @@ body {
   line-height: 0.8;
   text-shadow: 0 0 20px rgba(255, 62, 62, 0.4);
   pointer-events: none;
+  text-align: center;
+}
+
+.menu-logo-container {
+  margin-bottom: 40px;
 }
 
 .logo-text span {
