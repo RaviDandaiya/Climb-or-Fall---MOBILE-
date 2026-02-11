@@ -25,6 +25,9 @@ const SKINS = [
     { id: 'gold', name: 'Gilded', color: '#ffcc00', price: 500 }
 ];
 
+// MANUAL HEARTBEAT FLAG
+let LOOP_ACTIVE = false;
+
 class Game {
     constructor() {
         this.engine = Engine.create();
@@ -81,12 +84,24 @@ class Game {
 
         this.world.gravity.y = 1.35;
 
-        // Start the engine ONCE
+        // Start Rendering
         Render.run(this.render);
-        Runner.run(this.runner, this.engine);
 
-        Events.on(this.runner, 'beforeUpdate', () => this.update());
+        // Start MANUAL loop
+        if (!LOOP_ACTIVE) {
+            LOOP_ACTIVE = true;
+            this.loop();
+        }
+
         Events.on(this.render, 'afterRender', () => this.postProcess());
+    }
+
+    loop() {
+        if (!this.isGameOver && this.player) {
+            Engine.update(this.engine, 16.666);
+            this.update();
+        }
+        requestAnimationFrame(() => this.loop());
     }
 
     setupEventListeners() {
@@ -107,13 +122,15 @@ class Game {
         // Ad Revive
         document.getElementById('ad-revive-btn').onclick = () => this.startAdRevive();
 
-        window.addEventListener('keydown', (e) => {
+        // DOCUMENT SCALE INPUTS (Harder to block)
+        document.addEventListener('keydown', (e) => {
             this.keys[e.code] = true;
             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'ShiftLeft', 'ShiftRight'].includes(e.code)) {
                 e.preventDefault();
             }
         });
-        window.addEventListener('keyup', (e) => this.keys[e.code] = false);
+        document.addEventListener('keyup', (e) => this.keys[e.code] = false);
+
         window.addEventListener('resize', () => this.handleResize());
     }
 
@@ -490,7 +507,8 @@ class Game {
 
         // Player with skin
         const skin = SKINS.find(s => s.id === this.activeSkinId);
-        const p = this.player ? this.player.position : { x: 0, y: 0 };
+        if (!this.player) return; // Guard
+        const p = this.player.position;
         const sy = p.y + this.cameraY;
 
         ctx.save();
@@ -534,6 +552,7 @@ class Game {
 
     postProcess() {
         const ctx = this.render.context;
+        if (!this.player) return; // Guard
         const targetY = -this.player.position.y + CONFIG.canvasHeight / 2 + 100;
         this.cameraY += (targetY - this.cameraY) * 0.15;
         const bx = (Math.random() - 0.5) * this.shake;
