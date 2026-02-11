@@ -4,7 +4,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Abyssal Descent | Premium Rage Platformer</title>
+    <title>Climb-or-Fall | Ultimate Rage Platformer</title>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description"
+        content="Climb-or-Fall: A high-intensity 2D physics rage platformer. Scale the infinite tower, unlock skins, and complete the battle pass. Can you reach the top?">
+    <meta name="keywords"
+        content="Climb-or-Fall, rage game, platformer, 2d game, physics game, tower climb, free online game, skill game">
+    <meta name="author" content="Ravi Dandaiya">
+    <meta property="og:title" content="Climb-or-Fall | Premium Rage Platformer">
+    <meta property="og:description"
+        content="Test your skill in the ultimate climbing challenge. Unlock exclusive skins and battle pass rewards.">
+    <meta property="og:type" content="website">
+    <link rel="canonical" href="https://ravidandaiya.github.io/Climb-or-Fall-/">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;800;900&family=Creepster&display=swap"
@@ -18,34 +31,83 @@
         <!-- Main Game HUD -->
         <div id="ui-overlay">
             <div id="game-logo-container">
-                <h1 class="logo-text">ABYSSAL<br><span>DESCENT</span></h1>
+                <h1 class="logo-text">CLIMB<br><span>OR FALL</span></h1>
             </div>
-            <div class="stat-card">
-                <span class="stat-label">Elevation</span>
-                <span class="stat-value"><span id="height-value">0</span><span class="stat-unit">m</span></span>
+            <div class="hud-stats">
+                <div class="stat-card">
+                    <span class="stat-label">Elevation</span>
+                    <span class="stat-value"><span id="height-value">0</span><span class="stat-unit">m</span></span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Best</span>
+                    <span class="stat-value"><span id="best-value">0</span><span class="stat-unit">m</span></span>
+                </div>
             </div>
-            <div class="stat-card">
-                <span class="stat-label">Personal Best</span>
-                <span class="stat-value"><span id="best-value">0</span><span class="stat-unit">m</span></span>
+            <div class="currency-hud">
+                <div class="stat-card">
+                    <span class="stat-label">Coins</span>
+                    <span class="stat-value">🪙 <span id="coin-count">0</span></span>
+                </div>
             </div>
+        </div>
+
+        <!-- Navigation Sidebar -->
+        <div id="side-nav">
+            <button class="nav-icon" id="btn-shop">👕</button>
+            <button class="nav-icon" id="btn-pass">⚔️</button>
         </div>
 
         <!-- Start Menu -->
         <div id="difficulty-screen" class="screen-overlay">
-            <h1 class="horror-title">ABYSSAL</h1>
+            <h1 class="horror-title">CHOOSE FATE</h1>
             <div class="menu-buttons">
                 <button class="menu-btn easy" data-difficulty="easy">
                     EASY
-                    <span class="btn-desc">Slower abyss, wider paths</span>
+                    <span class="btn-desc">Steady climb</span>
                 </button>
                 <button class="menu-btn medium" data-difficulty="medium">
                     NORMAL
-                    <span class="btn-desc">The standard descent</span>
+                    <span class="btn-desc">Balanced pain</span>
                 </button>
                 <button class="menu-btn hard" data-difficulty="hard">
                     HARD
-                    <span class="btn-desc">Fast fire, lethal hazards</span>
+                    <span class="btn-desc">Pure agony</span>
                 </button>
+            </div>
+        </div>
+
+        <!-- Shop Screen -->
+        <div id="shop-screen" class="screen-overlay hidden">
+            <button class="close-btn">×</button>
+            <h1 class="horror-title">SKIN BOUTIQUE</h1>
+            <div class="skin-grid" id="skin-container">
+                <!-- Skins will be injected here -->
+            </div>
+        </div>
+
+        <!-- Battle Pass Screen -->
+        <div id="pass-screen" class="screen-overlay hidden">
+            <button class="close-btn">×</button>
+            <h1 class="horror-title">BATTLE PASS</h1>
+            <div class="pass-progress-container">
+                <div class="pass-bar">
+                    <div id="pass-fill"></div>
+                </div>
+                <p>Level <span id="pass-level">1</span></p>
+            </div>
+            <div class="pass-rewards" id="pass-rewards-container">
+                <!-- Pass items injected here -->
+            </div>
+        </div>
+
+        <!-- Reward Ad Simulation -->
+        <div id="ad-prompt" class="screen-overlay hidden">
+            <div class="ad-box">
+                <h2>REVIVE REQUIRED</h2>
+                <p>Watch a short video to continue your climb!</p>
+                <div class="ad-sim-timer" id="ad-timer">30</div>
+                <div class="ad-sim-placeholder">🎥 REWARDED AD PREVIEW</div>
+                <button id="skip-ad-btn" class="hidden">CLAIM REVIVE</button>
             </div>
         </div>
 
@@ -54,11 +116,14 @@
             <h1 class="horror-text">SHATTERED</h1>
             <div class="death-stats">
                 <div class="death-stat">
-                    <div class="death-stat-label">Height Reached</div>
+                    <div class="death-stat-label">Score</div>
                     <div class="death-stat-value" id="fall-distance">0</div>
                 </div>
             </div>
-            <button id="retry-button">RESCUE SOUL</button>
+            <div class="death-actions">
+                <button id="ad-revive-btn">📺 REVIVE (1 LEFT)</button>
+                <button id="retry-button">RESCUE SOUL</button>
+            </div>
         </div>
 
         <canvas id="game-canvas"></canvas>

@@ -13,28 +13,18 @@ const CONFIG = {
 };
 
 const DIFFICULTY_SETTINGS = {
-    easy: {
-        lavaSpeed: 0.35,
-        platformWidth: 180,
-        gapHeight: 110,
-        hazardChance: 0.0,
-        movingChance: 0.1,
-    },
-    medium: {
-        lavaSpeed: 0.45,
-        platformWidth: 160,
-        gapHeight: 120,
-        hazardChance: 0.04,
-        movingChance: 0.25,
-    },
-    hard: {
-        lavaSpeed: 0.75,
-        platformWidth: 130,
-        gapHeight: 140,
-        hazardChance: 0.12,
-        movingChance: 0.5,
-    }
+    easy: { lavaSpeed: 0.35, platformWidth: 180, gapHeight: 110, hazardChance: 0.0, movingChance: 0.1 },
+    medium: { lavaSpeed: 0.45, platformWidth: 160, gapHeight: 120, hazardChance: 0.04, movingChance: 0.25 },
+    hard: { lavaSpeed: 0.75, platformWidth: 130, gapHeight: 140, hazardChance: 0.12, movingChance: 0.5 }
 };
+
+const SKINS = [
+    { id: 'default', name: 'Shadow', color: '#9d00ff', price: 0 },
+    { id: 'crimson', name: 'Crimson', color: '#ff0044', price: 50 },
+    { id: 'toxic', name: 'Toxic', color: '#00ff44', price: 100 },
+    { id: 'frost', name: 'Frost', color: '#00ccff', price: 200 },
+    { id: 'gold', name: 'Gilded', color: '#ffcc00', price: 500 }
+];
 
 class Game {
     constructor() {
@@ -63,12 +53,19 @@ class Game {
         this.cameraY = 0;
         this.maxHeight = 0;
         this.currentHeight = 0;
-        this.bestHeight = localStorage.getItem('bestHeight') || 0;
+        this.bestHeight = parseInt(localStorage.getItem('bestHeight')) || 0;
+
+        // Progression
+        this.coins = parseInt(localStorage.getItem('coins')) || 0;
+        this.ownedSkins = JSON.parse(localStorage.getItem('ownedSkins')) || ['default'];
+        this.activeSkinId = localStorage.getItem('activeSkin') || 'default';
+        this.passLevel = parseInt(localStorage.getItem('passLevel')) || 1;
+        this.passXP = parseInt(localStorage.getItem('passXP')) || 0;
+
         this.isGameOver = true;
+        this.revivesLeft = 1;
         this.particles = [];
         this.shake = 0;
-        this.horrorPulse = 0;
-
         this.difficulty = 'medium';
         this.lavaSpeed = 0.6;
         this.lavaHeight = CONFIG.canvasHeight + 1000;
@@ -78,23 +75,44 @@ class Game {
     }
 
     init() {
-        document.getElementById('best-value').innerText = this.bestHeight;
-        document.getElementById('retry-button').onclick = () => location.reload();
-
-        const buttons = document.querySelectorAll('.menu-btn');
-        buttons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                this.startGame(btn.dataset.difficulty);
-            });
-        });
+        this.updateHUD();
+        this.setupEventListeners();
+        this.renderSkins();
+        this.renderPass();
 
         this.world.gravity.y = 1.35;
+        Events.on(this.runner, 'beforeUpdate', () => this.update());
+        Events.on(this.render, 'afterRender', () => this.postProcess());
+    }
+
+    setupEventListeners() {
+        document.getElementById('retry-button').onclick = () => location.reload();
+
+        // Difficulty
+        document.querySelectorAll('.menu-btn').forEach(btn => {
+            btn.onclick = () => this.startGame(btn.dataset.difficulty);
+        });
+
+        // Navigation
+        document.getElementById('btn-shop').onclick = () => document.getElementById('shop-screen').classList.remove('hidden');
+        document.getElementById('btn-pass').onclick = () => document.getElementById('pass-screen').classList.remove('hidden');
+        document.querySelectorAll('.close-btn').forEach(btn => {
+            btn.onclick = () => btn.parentElement.classList.add('hidden');
+        });
+
+        // Ad Revive
+        document.getElementById('ad-revive-btn').onclick = () => this.startAdRevive();
+
         window.addEventListener('keydown', (e) => this.keys[e.code] = true);
         window.addEventListener('keyup', (e) => this.keys[e.code] = false);
         window.addEventListener('resize', () => this.handleResize());
+    }
 
-        Events.on(this.runner, 'beforeUpdate', () => this.update());
-        Events.on(this.render, 'afterRender', () => this.postProcess());
+    updateHUD() {
+        document.getElementById('coin-count').innerText = this.coins;
+        document.getElementById('best-value').innerText = this.bestHeight;
+        document.getElementById('pass-level').innerText = this.passLevel;
+        document.getElementById('pass-fill').style.width = `${(this.passXP / 1000) * 100}%`;
     }
 
     startGame(diff) {
@@ -103,6 +121,7 @@ class Game {
         this.lavaSpeed = settings.lavaSpeed;
         this.lavaHeight = CONFIG.canvasHeight + 400;
         this.isGameOver = false;
+        this.revivesLeft = 1;
 
         document.getElementById('difficulty-screen').classList.add('hidden');
 
@@ -112,15 +131,6 @@ class Game {
 
         Render.run(this.render);
         Runner.run(this.runner, this.engine);
-    }
-
-    handleResize() {
-        CONFIG.canvasWidth = window.innerWidth;
-        CONFIG.canvasHeight = window.innerHeight;
-        this.canvas.width = CONFIG.canvasWidth;
-        this.canvas.height = CONFIG.canvasHeight;
-        this.render.options.width = CONFIG.canvasWidth;
-        this.render.options.height = CONFIG.canvasHeight;
     }
 
     createPlayer() {
@@ -151,51 +161,45 @@ class Game {
 
     addPlatform(y, index) {
         const settings = DIFFICULTY_SETTINGS[this.difficulty];
-        const isPillar = Math.random() < 0.3; // 30% chance of a pillar instead of a platform
+        const isPillar = Math.random() < 0.3;
 
         if (isPillar) {
-            this.addVerticalPillar(y, index);
+            const height = 150 + Math.random() * 100;
+            const x = Math.random() * (CONFIG.canvasWidth - 60) + 30;
+            const pillar = Bodies.rectangle(x, y, 30, height, {
+                isStatic: true,
+                label: 'platform',
+                render: { fillStyle: '#2d3436', strokeStyle: '#9d00ff', lineWidth: 2 }
+            });
+            this.platforms.push(pillar);
+            World.add(this.world, pillar);
         } else {
-            const x = Math.random() * (CONFIG.canvasWidth - settings.platformWidth) + settings.platformWidth / 2;
             const width = settings.platformWidth * (0.8 + Math.random() * 0.4);
-            const isMoving = index > 5 && Math.random() < settings.movingChance;
+            const x = Math.random() * (CONFIG.canvasWidth - width) + width / 2;
             const isHazard = index > 15 && Math.random() < settings.hazardChance;
-
             const platform = Bodies.rectangle(x, y, width, CONFIG.platformHeight, {
                 isStatic: true,
                 label: isHazard ? 'hazard' : 'platform',
-                render: {
-                    fillStyle: isHazard ? '#ff0000' : '#1e1e26',
-                    strokeStyle: isHazard ? '#fff' : '#4a4a5e',
-                    lineWidth: 2
-                },
-                plugin: {
-                    initialX: x,
-                    speed: 0.012 + (Math.random() * 0.02),
-                    range: 100 + Math.random() * 150,
-                    isMoving: isMoving
-                }
+                render: { fillStyle: isHazard ? '#ff0000' : '#1e1e26', strokeStyle: isHazard ? '#fff' : '#4a4a5e', lineWidth: 2 }
             });
             this.platforms.push(platform);
             World.add(this.world, platform);
+
+            // Spawn Coins
+            if (!isHazard && Math.random() < 0.2) {
+                this.addCoin(x, y - 40);
+            }
         }
     }
 
-    addVerticalPillar(y, index) {
-        const height = 150 + Math.random() * 100;
-        const x = Math.random() * (CONFIG.canvasWidth - 60) + 30;
-
-        const pillar = Bodies.rectangle(x, y, 30, height, {
+    addCoin(x, y) {
+        const coin = Bodies.circle(x, y, 8, {
             isStatic: true,
-            label: 'platform',
-            render: {
-                fillStyle: '#2d3436',
-                strokeStyle: '#9d00ff',
-                lineWidth: 2
-            }
+            isSensor: true,
+            label: 'coin',
+            render: { fillStyle: '#ffcc00' }
         });
-        this.platforms.push(pillar);
-        World.add(this.world, pillar);
+        World.add(this.world, coin);
     }
 
     update() {
@@ -205,41 +209,60 @@ class Game {
         this.updateStats();
         this.updateWorld();
         this.updateParticles();
+        this.checkCollisions();
         this.checkFall();
         this.cullAndGeneratePlatforms();
-
-        this.horrorPulse *= 0.95;
 
         if (this.shake > 0) this.shake *= 0.9;
     }
 
-    updateWorld() {
-        this.platforms.forEach(p => {
-            if (p.plugin && p.plugin.isMoving) {
-                const newX = p.plugin.initialX + Math.sin(this.engine.timing.timestamp * p.plugin.speed) * p.plugin.range;
-                Body.setPosition(p, { x: newX, y: p.position.y });
+    checkCollisions() {
+        const collisions = Matter.Query.colliding(this.player, World.allBodies(this.world));
+        collisions.forEach(collision => {
+            if (collision.bodyA.label === 'coin' || collision.bodyB.label === 'coin') {
+                const coin = collision.bodyA.label === 'coin' ? collision.bodyA : collision.bodyB;
+                this.collectCoin(coin);
             }
         });
+    }
 
+    collectCoin(coin) {
+        this.coins += 5;
+        this.addXP(20);
+        this.updateHUD();
+        this.createParticles(coin.position, '#ffcc00', 10);
+        World.remove(this.world, coin);
+        localStorage.setItem('coins', this.coins);
+    }
+
+    addXP(amt) {
+        this.passXP += amt;
+        if (this.passXP >= 1000) {
+            this.passXP = 0;
+            this.passLevel++;
+        }
+        localStorage.setItem('passXP', this.passXP);
+        localStorage.setItem('passLevel', this.passLevel);
+        this.updateHUD();
+        this.renderPass();
+    }
+
+    updateWorld() {
         this.lavaHeight -= this.lavaSpeed * (1 + this.currentHeight / 2000);
-
         if (this.player.position.y > this.lavaHeight) {
-            this.triggerDeath("THE ABYSS CONSUMES");
+            this.triggerDeath("CONSUMED BY LAVA");
         }
     }
 
     handleInput() {
         if (!this.player) return;
-
         const onGround = this.checkGrounded();
         const wallHit = this.checkWallContact();
         const velocity = this.player.velocity;
 
-        // Climbing Logic
         if (wallHit && (this.keys['ArrowUp'] || this.keys['KeyW'])) {
             this.isClimbing = true;
-            Body.setVelocity(this.player, { x: velocity.x, y: -4 }); // Slow climb up
-            this.createParticles(this.player.position, '#9d00ff', 1);
+            Body.setVelocity(this.player, { x: velocity.x, y: -4 });
         } else {
             this.isClimbing = false;
         }
@@ -253,104 +276,194 @@ class Game {
             }
         }
 
-        if ((this.keys['ShiftLeft'] || this.keys['ShiftRight']) && !this.dashCooldown) {
-            const dir = (this.keys['ArrowLeft'] || this.keys['KeyA']) ? -1 : 1;
-            Body.applyForce(this.player, this.player.position, { x: CONFIG.dashForce * dir, y: 0 });
-            this.dashCooldown = true;
-            this.shake = 6;
-            this.createParticles(this.player.position, '#ff0055', 25);
-            setTimeout(() => this.dashCooldown = false, 1100);
-        }
-
-        const currentMaxX = this.dashCooldown ? CONFIG.maxHorizontalVelocity * 2 : CONFIG.maxHorizontalVelocity;
-        if (Math.abs(velocity.x) > currentMaxX) {
-            Body.setVelocity(this.player, { x: Math.sign(velocity.x) * currentMaxX, y: velocity.y });
-        }
-
         if ((this.keys['Space'] || this.keys['ArrowUp'] || this.keys['KeyW']) && onGround && !this.jumpDebounce && !this.isClimbing) {
             Body.setVelocity(this.player, { x: velocity.x, y: -18.5 });
             this.jumpDebounce = true;
-            this.createParticles(this.player.position, '#ffffff', 20);
-            this.shake = 2;
             setTimeout(() => this.jumpDebounce = false, 180);
         }
     }
 
     checkWallContact() {
-        const bodies = Composite.allBodies(this.world).filter(b => b.label !== 'player' && b.label !== 'hazard');
+        const bodies = Composite.allBodies(this.world).filter(b => b.label === 'platform');
         const sideOffsets = [-CONFIG.playerRadius - 5, CONFIG.playerRadius + 5];
-        let contact = false;
-
-        for (let offset of sideOffsets) {
-            const start = { x: this.player.position.x, y: this.player.position.y };
-            const end = { x: this.player.position.x + offset, y: this.player.position.y };
-            const hits = Matter.Query.ray(bodies, start, end);
-            if (hits.length > 0) {
-                contact = true;
-                break;
-            }
-        }
-        return contact;
+        return sideOffsets.some(offset => Matter.Query.ray(bodies, this.player.position, { x: this.player.position.x + offset, y: this.player.position.y }).length > 0);
     }
 
     checkGrounded() {
-        const bodies = Composite.allBodies(this.world).filter(b => b.label !== 'player' && b.label !== 'hazard');
-        const offsets = [-15, 0, 15];
-        let grounded = false;
-
-        for (let offset of offsets) {
-            const start = { x: this.player.position.x + offset, y: this.player.position.y };
-            const end = { x: this.player.position.x + offset, y: this.player.position.y + CONFIG.playerRadius + 12 };
-            const hits = Matter.Query.ray(bodies, start, end);
-            if (hits.length > 0) {
-                grounded = true;
-                break;
-            }
-        }
-
-        const hazards = Composite.allBodies(this.world).filter(b => b.label === 'hazard');
-        for (let offset of offsets) {
-            const start = { x: this.player.position.x + offset, y: this.player.position.y };
-            const end = { x: this.player.position.x + offset, y: this.player.position.y + CONFIG.playerRadius + 8 };
-            const hazardHits = Matter.Query.ray(hazards, start, end);
-            if (hazardHits.length > 0) {
-                this.triggerDeath("SHATTERED INTO DARKNESS");
-                this.shake = 25;
-                break;
-            }
-        }
-
-        return grounded;
+        const bodies = Composite.allBodies(this.world).filter(b => b.label === 'platform' || b.label === 'floor');
+        return [-15, 0, 15].some(offset => Matter.Query.ray(bodies, { x: this.player.position.x + offset, y: this.player.position.y }, { x: this.player.position.x + offset, y: this.player.position.y + CONFIG.playerRadius + 15 }).length > 0);
     }
 
     updateStats() {
         const height = Math.floor((CONFIG.canvasHeight - 150 - this.player.position.y) / 10);
         this.currentHeight = Math.max(0, height);
-        if (this.currentHeight > this.maxHeight) this.maxHeight = this.currentHeight;
+        if (this.currentHeight > this.maxHeight) {
+            this.maxHeight = this.currentHeight;
+            this.addXP(1);
+        }
         document.getElementById('height-value').innerText = this.currentHeight;
     }
 
-    updateParticles() {
-        for (let i = this.particles.length - 1; i >= 0; i--) {
-            const p = this.particles[i];
-            p.x += p.vx;
-            p.y += p.vy;
-            p.vy += 0.12;
-            p.life -= 0.025;
-            if (p.life <= 0) this.particles.splice(i, 1);
+    triggerDeath(reason) {
+        if (this.isGameOver) return;
+        this.isGameOver = true;
+        this.shake = 35;
+        document.getElementById('fall-distance').innerText = this.maxHeight;
+        document.getElementById('death-screen').classList.remove('hidden');
+        document.getElementById('ad-revive-btn').disabled = (this.revivesLeft <= 0);
+        document.getElementById('ad-revive-btn').innerText = `📺 REVIVE (${this.revivesLeft} LEFT)`;
+
+        if (this.maxHeight > this.bestHeight) {
+            this.bestHeight = this.maxHeight;
+            localStorage.setItem('bestHeight', this.bestHeight);
+            this.updateHUD();
         }
+    }
+
+    startAdRevive() {
+        if (this.revivesLeft <= 0) return;
+        document.getElementById('ad-prompt').classList.remove('hidden');
+        let timeLeft = 5;
+        const timerEl = document.getElementById('ad-timer');
+        const skipBtn = document.getElementById('skip-ad-btn');
+        skipBtn.classList.add('hidden');
+
+        const interval = setInterval(() => {
+            timeLeft--;
+            timerEl.innerText = timeLeft;
+            if (timeLeft <= 0) {
+                clearInterval(interval);
+                skipBtn.classList.remove('hidden');
+            }
+        }, 1000);
+
+        skipBtn.onclick = () => {
+            document.getElementById('ad-prompt').classList.add('hidden');
+            document.getElementById('death-screen').classList.add('hidden');
+            this.revive();
+        };
+    }
+
+    revive() {
+        this.revivesLeft--;
+        this.isGameOver = false;
+        Body.setPosition(this.player, { x: CONFIG.canvasWidth / 2, y: this.player.position.y - 300 });
+        Body.setVelocity(this.player, { x: 0, y: 0 });
+        this.lavaHeight += 600; // Give breathing room
+        this.shake = 10;
+        this.createParticles(this.player.position, '#00ff88', 50);
+    }
+
+    renderSkins() {
+        const container = document.getElementById('skin-container');
+        container.innerHTML = '';
+        SKINS.forEach(skin => {
+            const isOwned = this.ownedSkins.includes(skin.id);
+            const isActive = this.activeSkinId === skin.id;
+            const card = document.createElement('div');
+            card.className = `skin-card ${isActive ? 'selected' : ''}`;
+            card.innerHTML = `
+                <div class="skin-preview" style="background: ${skin.color}"></div>
+                <h3>${skin.name}</h3>
+                <p>${isOwned ? (isActive ? 'EQUIPPED' : 'OWNED') : `🪙 ${skin.price}`}</p>
+            `;
+            card.onclick = () => this.handleSkinClick(skin);
+            container.appendChild(card);
+        });
+    }
+
+    handleSkinClick(skin) {
+        if (this.ownedSkins.includes(skin.id)) {
+            this.activeSkinId = skin.id;
+            localStorage.setItem('activeSkin', skin.id);
+        } else if (this.coins >= skin.price) {
+            this.coins -= skin.price;
+            this.ownedSkins.push(skin.id);
+            this.activeSkinId = skin.id;
+            localStorage.setItem('coins', this.coins);
+            localStorage.setItem('ownedSkins', JSON.stringify(this.ownedSkins));
+            localStorage.setItem('activeSkin', skin.id);
+        }
+        this.updateHUD();
+        this.renderSkins();
+    }
+
+    renderPass() {
+        const container = document.getElementById('pass-rewards-container');
+        container.innerHTML = '';
+        for (let i = 1; i <= 10; i++) {
+            const isUnlocked = this.passLevel >= i;
+            const reward = document.createElement('div');
+            reward.className = `reward-card ${isUnlocked ? 'unlocked' : ''}`;
+            reward.innerHTML = `
+                <div class="stat-label">LVL ${i}</div>
+                <div style="font-size: 2rem">${i % 2 === 0 ? '🪙' : '👕'}</div>
+                <div class="stat-unit">${i % 2 === 0 ? '+100 Coins' : 'Xmas Skin'}</div>
+            `;
+            container.appendChild(reward);
+        }
+    }
+
+    drawWorldExt(ctx) {
+        const lavaY = this.lavaHeight + this.cameraY;
+        const time = this.engine.timing.timestamp * 0.002;
+
+        // Red Lava
+        ctx.save();
+        ctx.fillStyle = `rgba(255, 30, 0, ${0.5 + Math.sin(time) * 0.15})`;
+        ctx.shadowBlur = 60;
+        ctx.shadowColor = '#ff2200';
+        ctx.fillRect(0, lavaY, CONFIG.canvasWidth, 3000);
+        ctx.beginPath();
+        ctx.strokeStyle = '#ff4400';
+        ctx.lineWidth = 10;
+        for (let i = 0; i <= CONFIG.canvasWidth; i += 25) {
+            ctx.lineTo(i, lavaY + Math.sin(time + i * 0.015) * 18);
+        }
+        ctx.stroke();
+        ctx.restore();
+
+        // Player with skin
+        const skin = SKINS.find(s => s.id === this.activeSkinId);
+        const p = this.player ? this.player.position : { x: 0, y: 0 };
+        const sy = p.y + this.cameraY;
+
+        ctx.save();
+        ctx.translate(p.x, sy);
+
+        // Draw Hands
+        ctx.strokeStyle = skin.color;
+        ctx.lineWidth = 4;
+        const armWave = Math.sin(time * 5) * 10;
+        ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(-25, armWave + (this.isClimbing ? -15 : 10)); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(25, -armWave + (this.isClimbing ? -15 : 10)); ctx.stroke();
+
+        ctx.rotate(this.player.angle);
+        ctx.fillStyle = '#050508';
+        ctx.beginPath(); ctx.arc(0, 0, CONFIG.playerRadius, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = skin.color;
+        ctx.lineWidth = 4; ctx.stroke();
+
+        // Eyes
+        const blink = Math.sin(time * 2.5) > 0.97 ? 0.1 : 1;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.ellipse(-8, -5, 5, 7 * blink, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(8, -5, 5, 7 * blink, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+
+        // Particles
+        this.particles.forEach((pt, i) => {
+            pt.x += pt.vx; pt.y += pt.vy; pt.vy += 0.12; pt.life -= 0.025;
+            if (pt.life <= 0) this.particles.splice(i, 1);
+            ctx.fillStyle = pt.color; ctx.globalAlpha = pt.life;
+            ctx.beginPath(); ctx.arc(pt.x, pt.y + this.cameraY, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.globalAlpha = 1;
+        });
     }
 
     createParticles(pos, color, count) {
         for (let i = 0; i < count; i++) {
-            this.particles.push({
-                x: pos.x,
-                y: pos.y,
-                vx: (Math.random() - 0.5) * 14,
-                vy: (Math.random() - 1) * 10,
-                life: 1.0,
-                color: color
-            });
+            this.particles.push({ x: pos.x, y: pos.y, vx: (Math.random() - 0.5) * 15, vy: (Math.random() - 1) * 12, life: 1, color });
         }
     }
 
@@ -358,156 +471,21 @@ class Game {
         const ctx = this.render.context;
         const targetY = -this.player.position.y + CONFIG.canvasHeight / 2 + 100;
         this.cameraY += (targetY - this.cameraY) * 0.15;
-
-        const shakeX = (Math.random() - 0.5) * this.shake;
-        const shakeY = (Math.random() - 0.5) * this.shake;
-
-        Render.lookAt(this.render, {
-            min: { x: shakeX, y: -this.cameraY + shakeY },
-            max: { x: CONFIG.canvasWidth + shakeX, y: CONFIG.canvasHeight - this.cameraY + shakeY }
-        });
-
+        const bx = (Math.random() - 0.5) * this.shake;
+        Render.lookAt(this.render, { min: { x: bx, y: -this.cameraY }, max: { x: CONFIG.canvasWidth + bx, y: CONFIG.canvasHeight - this.cameraY } });
         this.drawWorldExt(ctx);
-        // this.drawVignette(ctx);
-    }
-
-    drawWorldExt(ctx) {
-        const lavaY = this.lavaHeight + this.cameraY;
-        const time = this.engine.timing.timestamp * 0.002;
-
-        ctx.save();
-        ctx.fillStyle = `rgba(255, 30, 0, ${0.5 + Math.sin(time) * 0.15})`; // Back to Red Lava
-        ctx.shadowBlur = 60;
-        ctx.shadowColor = '#ff2200';
-        ctx.fillRect(0, lavaY, CONFIG.canvasWidth, 3000);
-
-        ctx.beginPath();
-        ctx.strokeStyle = '#ff4400';
-        ctx.lineWidth = 10;
-        for (let i = 0; i <= CONFIG.canvasWidth; i += 25) {
-            const wave = Math.sin(time + i * 0.015) * 18;
-            ctx.lineTo(i, lavaY + wave);
-        }
-        ctx.stroke();
-        ctx.restore();
-
-        const bgHue = 240;
-        this.canvas.style.backgroundColor = `hsla(${bgHue}, 20%, 15%, 1)`; // Lightened for visibility
-
-        const p = this.player.position;
-        const sx = p.x;
-        const sy = p.y + this.cameraY;
-
-        // Draw Arms/Hands
-        ctx.save();
-        ctx.translate(sx, sy);
-
-        const armWave = Math.sin(time * 5) * 10;
-        const climbAngle = this.isClimbing ? Math.sin(time * 10) * 0.5 : 0;
-
-        ctx.strokeStyle = '#9d00ff';
-        ctx.lineWidth = 4;
-        ctx.lineCap = 'round';
-
-        // Left Arm
-        ctx.beginPath();
-        ctx.moveTo(-10, 0);
-        ctx.lineTo(-25, armWave + (this.isClimbing ? -20 : 10));
-        ctx.stroke();
-
-        // Right Arm
-        ctx.beginPath();
-        ctx.moveTo(10, 0);
-        ctx.lineTo(25, -armWave + (this.isClimbing ? -20 : 10));
-        ctx.stroke();
-
-        ctx.rotate(this.player.angle);
-
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = '#9d00ff';
-        ctx.fillStyle = '#050508';
-        ctx.beginPath();
-        ctx.arc(0, 0, CONFIG.playerRadius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#9d00ff';
-        ctx.lineWidth = 4;
-        ctx.stroke();
-
-        const blink = Math.sin(time * 2.5) > 0.97 ? 0.1 : 1;
-        ctx.fillStyle = '#fff';
-        ctx.shadowBlur = 12;
-        ctx.shadowColor = '#fff';
-        ctx.beginPath();
-        ctx.ellipse(-8, -5, 5, 7 * blink, 0, 0, Math.PI * 2);
-        ctx.ellipse(8, -5, 5, 7 * blink, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.arc(0, 5, 9, 0.5, Math.PI - 0.5);
-        ctx.stroke();
-        ctx.restore();
-
-        this.particles.forEach(pt => {
-            ctx.save();
-            ctx.globalAlpha = pt.life;
-            ctx.fillStyle = pt.color;
-            ctx.beginPath();
-            ctx.arc(pt.x, pt.y + this.cameraY, 4.5, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-        });
-    }
-
-    drawVignette(ctx) {
-        const grd = ctx.createRadialGradient(
-            CONFIG.canvasWidth / 2, CONFIG.canvasHeight / 2, CONFIG.canvasHeight / 3,
-            CONFIG.canvasWidth / 2, CONFIG.canvasHeight / 2, CONFIG.canvasHeight / 1.1
-        );
-
-        grd.addColorStop(0, 'rgba(0,0,0,0)');
-        grd.addColorStop(1, 'rgba(0, 0, 0, 0.9)'); // Pure black vignette
-
-        ctx.fillStyle = grd;
-        ctx.fillRect(0, 0, CONFIG.canvasWidth, CONFIG.canvasHeight);
-    }
-
-    checkFall() {
-        if (this.player.position.y > this.lavaHeight + 50) {
-            this.triggerDeath("THE ABYSS CONSUMES");
-        }
-    }
-
-    triggerDeath(reason) {
-        if (this.isGameOver) return;
-        this.isGameOver = true;
-        this.shake = 35;
-
-        document.querySelector('.horror-text').innerText = reason;
-        document.getElementById('fall-distance').innerText = this.maxHeight;
-        document.getElementById('death-screen').classList.remove('hidden');
-
-        if (this.maxHeight > this.bestHeight) {
-            this.bestHeight = this.maxHeight;
-            localStorage.setItem('bestHeight', this.bestHeight);
-            document.getElementById('best-value').innerText = this.bestHeight;
-        }
-    }
-
-    restart() {
-        location.reload();
     }
 
     cullAndGeneratePlatforms() {
         const settings = DIFFICULTY_SETTINGS[this.difficulty];
-        const highestPlatform = this.platforms.reduce((min, p) => Math.min(min, p.position.y), Infinity);
-        if (this.player.position.y < highestPlatform + 800) {
-            this.addPlatform(highestPlatform - settings.gapHeight, this.platforms.length);
-        }
+        const highest = this.platforms.reduce((min, p) => Math.min(min, p.position.y), Infinity);
+        if (this.player.position.y < highest + 800) this.addPlatform(highest - (settings.gapHeight / 1.5), this.platforms.length);
+    }
+
+    handleResize() {
+        this.canvas.width = window.innerWidth; this.canvas.height = window.innerHeight;
+        this.render.options.width = window.innerWidth; this.render.options.height = window.innerHeight;
     }
 }
 
-window.onload = () => {
-    new Game();
-};
+window.onload = () => new Game();
