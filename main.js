@@ -347,7 +347,7 @@ class Game {
         });
 
         this.drawWorldExt(ctx);
-        this.drawVignette(ctx);
+        // this.drawVignette(ctx);
     }
 
     drawWorldExt(ctx) {
@@ -371,7 +371,7 @@ class Game {
         ctx.restore();
 
         const bgHue = 240;
-        this.canvas.style.backgroundColor = `hsla(${bgHue}, 10%, 2%, 1)`;
+        this.canvas.style.backgroundColor = `hsla(${bgHue}, 20%, 15%, 1)`; // Lightened for visibility
 
         const p = this.player.position;
         const sx = p.x;
