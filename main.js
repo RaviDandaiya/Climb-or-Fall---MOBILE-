@@ -144,37 +144,58 @@ class Game {
     }
 
     generateInitialPlatforms(settings) {
-        for (let i = 0; i < 40; i++) {
-            this.addPlatform(CONFIG.canvasHeight - 250 - (i * settings.gapHeight), i);
+        for (let i = 0; i < 80; i++) {
+            this.addPlatform(CONFIG.canvasHeight - 250 - (i * (settings.gapHeight / 1.5)), i);
         }
     }
 
     addPlatform(y, index) {
         const settings = DIFFICULTY_SETTINGS[this.difficulty];
-        const x = Math.random() * (CONFIG.canvasWidth - settings.platformWidth) + settings.platformWidth / 2;
-        const width = settings.platformWidth * (0.8 + Math.random() * 0.4);
+        const isPillar = Math.random() < 0.3; // 30% chance of a pillar instead of a platform
 
-        const isMoving = index > 5 && Math.random() < settings.movingChance;
-        const isHazard = index > 15 && Math.random() < settings.hazardChance;
+        if (isPillar) {
+            this.addVerticalPillar(y, index);
+        } else {
+            const x = Math.random() * (CONFIG.canvasWidth - settings.platformWidth) + settings.platformWidth / 2;
+            const width = settings.platformWidth * (0.8 + Math.random() * 0.4);
+            const isMoving = index > 5 && Math.random() < settings.movingChance;
+            const isHazard = index > 15 && Math.random() < settings.hazardChance;
 
-        const platform = Bodies.rectangle(x, y, width, CONFIG.platformHeight, {
+            const platform = Bodies.rectangle(x, y, width, CONFIG.platformHeight, {
+                isStatic: true,
+                label: isHazard ? 'hazard' : 'platform',
+                render: {
+                    fillStyle: isHazard ? '#ff0000' : '#1e1e26',
+                    strokeStyle: isHazard ? '#fff' : '#4a4a5e',
+                    lineWidth: 2
+                },
+                plugin: {
+                    initialX: x,
+                    speed: 0.012 + (Math.random() * 0.02),
+                    range: 100 + Math.random() * 150,
+                    isMoving: isMoving
+                }
+            });
+            this.platforms.push(platform);
+            World.add(this.world, platform);
+        }
+    }
+
+    addVerticalPillar(y, index) {
+        const height = 150 + Math.random() * 100;
+        const x = Math.random() * (CONFIG.canvasWidth - 60) + 30;
+
+        const pillar = Bodies.rectangle(x, y, 30, height, {
             isStatic: true,
-            label: isHazard ? 'hazard' : 'platform',
+            label: 'platform',
             render: {
-                fillStyle: isHazard ? '#ff0000' : '#1e1e26',
-                strokeStyle: isHazard ? '#fff' : '#4a4a5e',
+                fillStyle: '#2d3436',
+                strokeStyle: '#9d00ff',
                 lineWidth: 2
-            },
-            plugin: {
-                initialX: x,
-                speed: 0.012 + (Math.random() * 0.02),
-                range: 100 + Math.random() * 150,
-                isMoving: isMoving
             }
         });
-
-        this.platforms.push(platform);
-        World.add(this.world, platform);
+        this.platforms.push(pillar);
+        World.add(this.world, pillar);
     }
 
     update() {
