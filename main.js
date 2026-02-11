@@ -4,7 +4,7 @@ const CONFIG = {
     canvasWidth: window.innerWidth,
     canvasHeight: window.innerHeight,
     playerRadius: 18,
-    jumpForce: -13, // Direct velocity value
+    jumpForce: -16, // Increased jump height
     moveSpeed: 6.5,  // Direct velocity value
     maxHorizontalVelocity: 8,
     platformWidth: 140,
@@ -531,6 +531,16 @@ class Game {
         ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(25, -armWave + (this.isClimbing ? -15 : 10)); ctx.stroke();
 
         if (this.player) ctx.rotate(this.player.angle);
+
+        // Squash and Stretch Animation
+        const velocity = this.player.velocity.y;
+        let scaleX = 1, scaleY = 1;
+        if (Math.abs(velocity) > 1) {
+            scaleX = 1 - Math.min(Math.abs(velocity) * 0.02, 0.2);
+            scaleY = 1 + Math.min(Math.abs(velocity) * 0.02, 0.2);
+        }
+        ctx.scale(scaleX, scaleY);
+
         ctx.fillStyle = '#050508';
         ctx.beginPath(); ctx.arc(0, 0, CONFIG.playerRadius, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = skin.color;
