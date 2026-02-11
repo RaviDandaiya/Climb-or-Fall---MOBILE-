@@ -4,7 +4,7 @@ const CONFIG = {
     canvasWidth: window.innerWidth,
     canvasHeight: window.innerHeight,
     playerRadius: 18,
-    jumpForce: -16, // Increased jump height
+    jumpForce: -18, // Extra high jump
     moveSpeed: 6.5,  // Direct velocity value
     maxHorizontalVelocity: 8,
     platformWidth: 140,
@@ -206,7 +206,8 @@ class Game {
 
     generateInitialPlatforms(settings) {
         for (let i = 0; i < 80; i++) {
-            this.addPlatform(CONFIG.canvasHeight - 250 - (i * (settings.gapHeight / 1.5)), i);
+            // Fix: Start platforms much closer to the floor (120px gap instead of 250px)
+            this.addPlatform(CONFIG.canvasHeight - 120 - (i * (settings.gapHeight / 1.5)), i);
         }
     }
 
@@ -532,12 +533,12 @@ class Game {
 
         if (this.player) ctx.rotate(this.player.angle);
 
-        // Squash and Stretch Animation
+        // Exaggerated Squash and Stretch Animation (2x stronger)
         const velocity = this.player.velocity.y;
         let scaleX = 1, scaleY = 1;
         if (Math.abs(velocity) > 1) {
-            scaleX = 1 - Math.min(Math.abs(velocity) * 0.02, 0.2);
-            scaleY = 1 + Math.min(Math.abs(velocity) * 0.02, 0.2);
+            scaleX = 1 - Math.min(Math.abs(velocity) * 0.04, 0.4); // More extreme
+            scaleY = 1 + Math.min(Math.abs(velocity) * 0.04, 0.4);
         }
         ctx.scale(scaleX, scaleY);
 
