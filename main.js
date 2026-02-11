@@ -130,12 +130,17 @@ class Game {
         this.lavaSpeed = settings.lavaSpeed;
         this.lavaHeight = CONFIG.canvasHeight + 400;
         this.revivesLeft = 1;
-        this.isGameOver = false; // Must be false BEFORE generation
+
+        // Force Game State Active
+        this.isGameOver = false;
 
         document.getElementById('difficulty-screen').classList.add('hidden');
 
+        // Ensure Window has focus for controls
+        window.focus();
+        if (document.activeElement) document.activeElement.blur();
+
         // Clear existing world
-        // Clear existing world but keep the engine running
         World.clear(this.world);
         // Do NOT use Engine.clear() as it might detach the runner
         this.platforms = [];
@@ -145,9 +150,15 @@ class Game {
         this.createStartPlatform();
         this.generateInitialPlatforms(settings);
 
-        // Ensure gravity is reset after clear
+        // Force Body Active
+        Body.setStatic(this.player, false);
+        Body.setSleeping(this.player, false);
+
+        // Reset Gravity
         this.world.gravity.y = 1.35;
-        this.isGameOver = false; // Enable updates
+
+        // Safety: ensure runner is enabled
+        this.runner.enabled = true;
     }
 
     createPlayer() {
