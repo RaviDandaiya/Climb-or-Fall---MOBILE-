@@ -109,7 +109,7 @@ class Game {
 
         window.addEventListener('keydown', (e) => {
             this.keys[e.code] = true;
-            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'ShiftLeft', 'ShiftRight'].includes(e.code)) {
                 e.preventDefault();
             }
         });
@@ -287,11 +287,15 @@ class Game {
 
         const onGround = this.checkGrounded();
 
+        // Dash Check
+        const isDashing = this.keys['ShiftLeft'] || this.keys['ShiftRight'];
+        const currentSpeed = isDashing ? speed * 1.6 : speed;
+
         let moveX = 0;
         if (this.keys['ArrowLeft'] || this.keys['KeyA']) {
-            moveX = -speed;
+            moveX = -currentSpeed;
         } else if (this.keys['ArrowRight'] || this.keys['KeyD']) {
-            moveX = speed;
+            moveX = currentSpeed;
         }
 
         // Apply Horizontal Velocity (preserve Vertical)
