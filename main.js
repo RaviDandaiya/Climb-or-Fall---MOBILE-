@@ -64,15 +64,15 @@ class Game {
         this.maxHeight = 0;
         this.currentHeight = 0;
         this.bestHeight = localStorage.getItem('bestHeight') || 0;
-        this.isGameOver = true; // Start paused for menu
+        this.isGameOver = true;
         this.particles = [];
         this.shake = 0;
         this.horrorPulse = 0;
 
-        // Difficulty values (will be set on start)
         this.difficulty = 'medium';
         this.lavaSpeed = 0.6;
         this.lavaHeight = CONFIG.canvasHeight + 1000;
+        this.isClimbing = false;
 
         this.init();
     }
@@ -81,7 +81,6 @@ class Game {
         document.getElementById('best-value').innerText = this.bestHeight;
         document.getElementById('retry-button').onclick = () => location.reload();
 
-        // Difficulty selection
         const buttons = document.querySelectorAll('.menu-btn');
         buttons.forEach(btn => {
             btn.addEventListener('click', () => {
@@ -188,12 +187,7 @@ class Game {
         this.checkFall();
         this.cullAndGeneratePlatforms();
 
-        const distToLava = Math.abs(this.player.position.y - this.lavaHeight);
-        if (distToLava < 500) {
-            this.horrorPulse = (500 - distToLava) / 500;
-        } else {
-            this.horrorPulse *= 0.95;
-        }
+        this.horrorPulse *= 0.95;
 
         if (this.shake > 0) this.shake *= 0.9;
     }
@@ -206,7 +200,7 @@ class Game {
             }
         });
 
-        this.lavaHeight -= this.lavaSpeed * (1 + this.currentHeight / 2000); // Scale with height
+        this.lavaHeight -= this.lavaSpeed * (1 + this.currentHeight / 2000);
 
         if (this.player.position.y > this.lavaHeight) {
             this.triggerDeath("THE ABYSS CONSUMES");
@@ -217,13 +211,25 @@ class Game {
         if (!this.player) return;
 
         const onGround = this.checkGrounded();
+        const wallHit = this.checkWallContact();
         const velocity = this.player.velocity;
 
-        if (this.keys['ArrowLeft'] || this.keys['KeyA']) {
-            Body.applyForce(this.player, this.player.position, { x: -CONFIG.moveForce, y: 0 });
+        // Climbing Logic
+        if (wallHit && (this.keys['ArrowUp'] || this.keys['KeyW'])) {
+            this.isClimbing = true;
+            Body.setVelocity(this.player, { x: velocity.x, y: -4 }); // Slow climb up
+            this.createParticles(this.player.position, '#9d00ff', 1);
+        } else {
+            this.isClimbing = false;
         }
-        if (this.keys['ArrowRight'] || this.keys['KeyD']) {
-            Body.applyForce(this.player, this.player.position, { x: CONFIG.moveForce, y: 0 });
+
+        if (!this.isClimbing) {
+            if (this.keys['ArrowLeft'] || this.keys['KeyA']) {
+                Body.applyForce(this.player, this.player.position, { x: -CONFIG.moveForce, y: 0 });
+            }
+            if (this.keys['ArrowRight'] || this.keys['KeyD']) {
+                Body.applyForce(this.player, this.player.position, { x: CONFIG.moveForce, y: 0 });
+            }
         }
 
         if ((this.keys['ShiftLeft'] || this.keys['ShiftRight']) && !this.dashCooldown) {
@@ -240,13 +246,30 @@ class Game {
             Body.setVelocity(this.player, { x: Math.sign(velocity.x) * currentMaxX, y: velocity.y });
         }
 
-        if ((this.keys['Space'] || this.keys['ArrowUp'] || this.keys['KeyW']) && onGround && !this.jumpDebounce) {
+        if ((this.keys['Space'] || this.keys['ArrowUp'] || this.keys['KeyW']) && onGround && !this.jumpDebounce && !this.isClimbing) {
             Body.setVelocity(this.player, { x: velocity.x, y: -18.5 });
             this.jumpDebounce = true;
             this.createParticles(this.player.position, '#ffffff', 20);
             this.shake = 2;
             setTimeout(() => this.jumpDebounce = false, 180);
         }
+    }
+
+    checkWallContact() {
+        const bodies = Composite.allBodies(this.world).filter(b => b.label !== 'player' && b.label !== 'hazard');
+        const sideOffsets = [-CONFIG.playerRadius - 5, CONFIG.playerRadius + 5];
+        let contact = false;
+
+        for (let offset of sideOffsets) {
+            const start = { x: this.player.position.x, y: this.player.position.y };
+            const end = { x: this.player.position.x + offset, y: this.player.position.y };
+            const hits = Matter.Query.ray(bodies, start, end);
+            if (hits.length > 0) {
+                contact = true;
+                break;
+            }
+        }
+        return contact;
     }
 
     checkGrounded() {
@@ -332,13 +355,13 @@ class Game {
         const time = this.engine.timing.timestamp * 0.002;
 
         ctx.save();
-        ctx.fillStyle = `rgba(255, 30, 0, ${0.4 + Math.sin(time) * 0.12})`;
+        ctx.fillStyle = `rgba(20, 20, 25, ${0.4 + Math.sin(time) * 0.12})`; // Reduced lava glow
         ctx.shadowBlur = 50;
-        ctx.shadowColor = '#ff2200';
+        ctx.shadowColor = '#1e1e26';
         ctx.fillRect(0, lavaY, CONFIG.canvasWidth, 3000);
 
         ctx.beginPath();
-        ctx.strokeStyle = '#ff6600';
+        ctx.strokeStyle = '#333';
         ctx.lineWidth = 8;
         for (let i = 0; i <= CONFIG.canvasWidth; i += 25) {
             const wave = Math.sin(time + i * 0.015) * 18;
@@ -347,15 +370,36 @@ class Game {
         ctx.stroke();
         ctx.restore();
 
-        const bgHue = 240 + Math.min(100, this.maxHeight / 15);
-        this.canvas.style.backgroundColor = `hsla(${bgHue}, 35%, 4%, 1)`;
+        const bgHue = 240;
+        this.canvas.style.backgroundColor = `hsla(${bgHue}, 10%, 2%, 1)`;
 
         const p = this.player.position;
         const sx = p.x;
         const sy = p.y + this.cameraY;
 
+        // Draw Arms/Hands
         ctx.save();
         ctx.translate(sx, sy);
+
+        const armWave = Math.sin(time * 5) * 10;
+        const climbAngle = this.isClimbing ? Math.sin(time * 10) * 0.5 : 0;
+
+        ctx.strokeStyle = '#9d00ff';
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+
+        // Left Arm
+        ctx.beginPath();
+        ctx.moveTo(-10, 0);
+        ctx.lineTo(-25, armWave + (this.isClimbing ? -20 : 10));
+        ctx.stroke();
+
+        // Right Arm
+        ctx.beginPath();
+        ctx.moveTo(10, 0);
+        ctx.lineTo(25, -armWave + (this.isClimbing ? -20 : 10));
+        ctx.stroke();
+
         ctx.rotate(this.player.angle);
 
         ctx.shadowBlur = 20;
@@ -402,15 +446,10 @@ class Game {
         );
 
         grd.addColorStop(0, 'rgba(0,0,0,0)');
-        grd.addColorStop(1, `rgba(${Math.floor(this.horrorPulse * 180)}, 0, 0, ${0.75 + this.horrorPulse * 0.25})`);
+        grd.addColorStop(1, 'rgba(0, 0, 0, 0.9)'); // Pure black vignette
 
         ctx.fillStyle = grd;
         ctx.fillRect(0, 0, CONFIG.canvasWidth, CONFIG.canvasHeight);
-
-        if (Math.random() > 0.993 && this.currentHeight > 150) {
-            ctx.fillStyle = 'rgba(255,255,255,0.08)';
-            ctx.fillRect(0, 0, CONFIG.canvasWidth, CONFIG.canvasHeight);
-        }
     }
 
     checkFall() {
