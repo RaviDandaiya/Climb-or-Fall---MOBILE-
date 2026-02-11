@@ -4,10 +4,9 @@ const CONFIG = {
     canvasWidth: window.innerWidth,
     canvasHeight: window.innerHeight,
     playerRadius: 18,
-    playerRadius: 18,
     jumpForce: -24, // ULTRA JUMP
-    moveSpeed: 8.0,  // Even faster to match jump height
-    maxHorizontalVelocity: 11,
+    moveSpeed: 9.5,  // HYPER SPEED
+    maxHorizontalVelocity: 14,
     platformWidth: 140,
     platformHeight: 25,
 };
@@ -207,8 +206,8 @@ class Game {
 
     generateInitialPlatforms(settings) {
         for (let i = 0; i < 80; i++) {
-            // Fix: Start platforms much closer to the floor (120px gap instead of 250px)
-            this.addPlatform(CONFIG.canvasHeight - 120 - (i * (settings.gapHeight / 1.5)), i);
+            // FIX: Start platforms virtually on the ground and pack them tighter
+            this.addPlatform(CONFIG.canvasHeight - 60 - (i * (settings.gapHeight / 1.8)), i);
         }
     }
 
