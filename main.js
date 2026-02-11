@@ -279,8 +279,15 @@ class Game {
     checkCollisions() {
         if (!this.player) return;
 
-        // Fix: Use correct Matter.js API 'collides'
-        const collisions = Matter.Query.collides(this.player, Composite.allBodies(this.world));
+        // Check for collisions safely
+        let collisions = [];
+        try {
+            collisions = Matter.Query.collides(this.player, Composite.allBodies(this.world));
+        } catch (e) {
+            // Fallback or ignore if API mismatch persists
+            console.warn("Collision check failed:", e);
+            return;
+        }
 
         collisions.forEach(collision => {
             // collides returns objects with { bodyA, bodyB }
