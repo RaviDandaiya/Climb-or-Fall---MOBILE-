@@ -278,45 +278,52 @@ class Game {
     }
 
     handleInput() {
-        if (!this.player || this.isGameOver) return;
+        if (this.isGameOver || !this.player) return;
+
+        // Valid Physics Check (prevent NaN)
+        if (!this.player.velocity || isNaN(this.player.velocity.x)) {
+            Body.setVelocity(this.player, { x: 0, y: 0 });
+        }
 
         const velocity = this.player.velocity;
-        // Ensure CONFIG values are present
-        const speed = (CONFIG && CONFIG.moveSpeed) ? CONFIG.moveSpeed : 6.5;
-        const jump = (CONFIG && CONFIG.jumpForce) ? CONFIG.jumpForce : -13;
+        const baseSpeed = CONFIG.moveSpeed || 6.5;
+        const jumpForce = CONFIG.jumpForce || -13;
 
+        // Dash Logic
+        const isDashing = this.keys['ShiftLeft'] || this.keys['ShiftRight'];
+        const currentSpeed = isDashing ? baseSpeed * 1.6 : baseSpeed;
+
+        // Ground Check
         const onGround = this.checkGrounded();
 
-        // Dash Check
-        const isDashing = this.keys['ShiftLeft'] || this.keys['ShiftRight'];
-        const currentSpeed = isDashing ? speed * 1.6 : speed;
-
-        let moveX = 0;
+        // Horizontal Movement
+        let targetVx = 0;
         if (this.keys['ArrowLeft'] || this.keys['KeyA']) {
-            moveX = -currentSpeed;
+            targetVx = -currentSpeed;
         } else if (this.keys['ArrowRight'] || this.keys['KeyD']) {
-            moveX = currentSpeed;
+            targetVx = currentSpeed;
         }
 
-        // Apply Horizontal Velocity (preserve Vertical)
-        if (moveX !== 0) {
-            Body.setVelocity(this.player, { x: moveX, y: velocity.y });
+        // Apply Horizontal Velocity instantly (snappy controls)
+        if (targetVx !== 0) {
+            Body.setVelocity(this.player, { x: targetVx, y: velocity.y });
         } else {
-            // Apply slight friction damping
-            Body.setVelocity(this.player, { x: velocity.x * 0.9, y: velocity.y });
+            // Strong friction for instant stop
+            Body.setVelocity(this.player, { x: velocity.x * 0.8, y: velocity.y });
         }
 
-        // Jump Logic
+        // Jump Logic (with debounce)
         if ((this.keys['Space'] || this.keys['ArrowUp'] || this.keys['KeyW']) && onGround && !this.jumpDebounce) {
-            Body.setVelocity(this.player, { x: this.player.velocity.x, y: jump });
+            Body.setVelocity(this.player, { x: this.player.velocity.x, y: jumpForce });
             this.jumpDebounce = true;
-            setTimeout(() => this.jumpDebounce = false, 250);
+            setTimeout(() => this.jumpDebounce = false, 200);
         }
 
-        // Wall Climb Safety
+        // Wall Climb Logic
         if (this.checkWallContact()) {
             if (this.keys['ArrowUp'] || this.keys['KeyW']) {
                 this.isClimbing = true;
+                // Upward climb force
                 Body.setVelocity(this.player, { x: velocity.x, y: -5 });
             } else {
                 this.isClimbing = false;
