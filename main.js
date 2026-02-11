@@ -64,8 +64,8 @@ class Game {
         this.passLevel = parseInt(localStorage.getItem('passLevel')) || 1;
         this.passXP = parseInt(localStorage.getItem('passXP')) || 0;
 
-        this.isGameOver = true;
         this.revivesLeft = 1;
+        this.isGameOver = true;
         this.particles = [];
         this.shake = 0;
         this.difficulty = 'medium';
