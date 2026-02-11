@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abyssal Descent | Rage Platformer</title>
+    <meta name="description" content="A precision physics-based rage platformer. Climb the tower or fall to the abyss.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&family=Creepster&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="./style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+</head>
+
+<body>
+    <div id="game-container">
+        <div id="ui-overlay">
+            <div id="height-display">Height: <span id="height-value">0</span>m</div>
+            <div id="best-display">Best: <span id="best-value">0</span>m</div>
+        </div>
+        <div id="difficulty-screen">
+            <h1 class="horror-text">CHOOSE YOUR FATE</h1>
+            <div class="menu-buttons">
+                <button class="menu-btn easy" data-difficulty="easy">EASY</button>
+                <button class="menu-btn medium" data-difficulty="medium">MEDIUM</button>
+                <button class="menu-btn hard" data-difficulty="hard">HARD</button>
+            </div>
+        </div>
+        <div id="death-screen" class="hidden">
+            <h1 class="horror-text">THE ABYSS CONSUMES</h1>
+            <p>You fell <span id="fall-distance">0</span> meters.</p>
+            <button id="retry-button">CLIMB AGAIN</button>
+        </div>
+        <canvas id="game-canvas"></canvas>
+    </div>
+    <script src="./main.js"></script>
+</body>
+
+</html>
