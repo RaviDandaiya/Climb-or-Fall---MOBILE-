@@ -80,6 +80,11 @@ class Game {
         this.renderPass();
 
         this.world.gravity.y = 1.35;
+
+        // Start the engine ONCE
+        Render.run(this.render);
+        Runner.run(this.runner, this.engine);
+
         Events.on(this.runner, 'beforeUpdate', () => this.update());
         Events.on(this.render, 'afterRender', () => this.postProcess());
     }
@@ -130,8 +135,9 @@ class Game {
         document.getElementById('difficulty-screen').classList.add('hidden');
 
         // Clear existing world
+        // Clear existing world but keep the engine running
         World.clear(this.world);
-        Engine.clear(this.engine);
+        // Do NOT use Engine.clear() as it might detach the runner
         this.platforms = [];
         this.particles = [];
 
@@ -139,8 +145,9 @@ class Game {
         this.createStartPlatform();
         this.generateInitialPlatforms(settings);
 
-        Render.run(this.render);
-        Runner.run(this.runner, this.engine);
+        // Ensure gravity is reset after clear
+        this.world.gravity.y = 1.35;
+        this.isGameOver = false; // Enable updates
     }
 
     createPlayer() {
