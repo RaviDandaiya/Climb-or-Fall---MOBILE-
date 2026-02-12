@@ -141,6 +141,14 @@ body {
   pointer-events: none;
 }
 
+.hidden {
+  display: none !important;
+}
+
+#ad-prompt {
+  z-index: 2000;
+}
+
 .close-btn {
   position: absolute;
   top: 30px;
