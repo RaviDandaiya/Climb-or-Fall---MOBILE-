@@ -68,6 +68,7 @@ class Game {
 
         this.claimedRewards = JSON.parse(localStorage.getItem('claimedRewards')) || [];
         this.revivesLeft = Infinity; // UNLIMITED REVIVES
+        this.adInterval = null; // Track timer interval
         this.isGameOver = true;
         this.particles = [];
         this.shake = 0;
@@ -462,37 +463,50 @@ class Game {
     }
 
     startAdRevive() {
-        // Removed limit check
+        // Clear any existing timer
+        if (this.adInterval) clearInterval(this.adInterval);
+
         document.getElementById('ad-prompt').classList.remove('hidden');
         let timeLeft = 60;
         const timerEl = document.getElementById('ad-timer');
         const skipBtn = document.getElementById('skip-ad-btn');
+        timerEl.innerText = timeLeft;
         skipBtn.classList.add('hidden');
 
-        const interval = setInterval(() => {
+        this.adInterval = setInterval(() => {
             timeLeft--;
             timerEl.innerText = timeLeft;
             if (timeLeft <= 0) {
-                clearInterval(interval);
+                clearInterval(this.adInterval);
                 skipBtn.classList.remove('hidden');
             }
         }, 1000);
 
-        skipBtn.onclick = () => {
+        const doRevive = (e) => {
+            if (e) e.preventDefault(); // Prevent double firing on touch
             document.getElementById('ad-prompt').classList.add('hidden');
             document.getElementById('death-screen').classList.add('hidden');
             this.revive();
         };
+
+        // Handle both Click and Touch for reliability
+        skipBtn.onclick = doRevive;
+        skipBtn.ontouchstart = doRevive;
     }
 
     revive() {
         // this.revivesLeft--; // No decrement for unlimited
         this.isGameOver = false;
+
+        // Ensure Physics State is Active
+        Body.setStatic(this.player, false);
+        Body.setSleeping(this.player, false);
+
         // Resume closer to where fell, but ensure on screen
         const safeX = Math.max(50, Math.min(CONFIG.canvasWidth - 50, this.player.position.x));
-        Body.setPosition(this.player, { x: safeX, y: this.player.position.y - 300 });
+        Body.setPosition(this.player, { x: safeX, y: this.player.position.y - 500 });
         Body.setVelocity(this.player, { x: 0, y: 0 });
-        this.lavaHeight += 600; // Give breathing room
+        this.lavaHeight += 800; // Extra breathing room
         this.shake = 10;
         this.createParticles(this.player.position, '#00ff88', 50);
     }
