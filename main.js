@@ -483,31 +483,68 @@ class Game {
         }, 1000);
 
         const doRevive = (e) => {
-            if (e) e.preventDefault(); // Prevent double firing on touch
-            document.getElementById('ad-prompt').classList.add('hidden');
-            document.getElementById('death-screen').classList.add('hidden');
-            this.revive();
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            try {
+                document.getElementById('ad-prompt').classList.add('hidden');
+                document.getElementById('death-screen').classList.add('hidden');
+                this.revive();
+            } catch (err) {
+                console.error("Revive Failed:", err);
+                alert("Game Error: " + err.message);
+                location.reload();
+            }
         };
 
-        // Handle both Click and Touch for reliability
-        skipBtn.onclick = doRevive;
-        skipBtn.ontouchstart = doRevive;
+        // Handle both Click and Touch for reliability using listeners
+        // Clean up old "onclick" which might linger
+        skipBtn.onclick = null;
+        skipBtn.ontouchstart = null;
+
+        // Remove prior listeners to avoid stacking if function called multiple times
+        // (Note: Anonymous functions can't be removed easily, but startAdRevive usually 
+        // runs once per death cycle. To be safe, we clone the node to strip listeners)
+        const newBtn = skipBtn.cloneNode(true);
+        skipBtn.parentNode.replaceChild(newBtn, skipBtn);
+
+        newBtn.addEventListener('click', doRevive);
+        newBtn.addEventListener('touchstart', doRevive, { passive: false });
     }
 
     revive() {
-        // this.revivesLeft--; // No decrement for unlimited
         this.isGameOver = false;
 
         // Ensure Physics State is Active
         Body.setStatic(this.player, false);
         Body.setSleeping(this.player, false);
 
-        // Resume closer to where fell, but ensure on screen
-        const safeX = Math.max(50, Math.min(CONFIG.canvasWidth - 50, this.player.position.x));
-        Body.setPosition(this.player, { x: safeX, y: this.player.position.y - 500 });
+        // Resume closer to where fell
+        // Ensure X is within safe bounds (padding)
+        const safeX = Math.max(100, Math.min(CONFIG.canvasWidth - 100, this.player.position.x));
+        const reviveY = this.player.position.y - 600;
+
+        Body.setPosition(this.player, { x: safeX, y: reviveY });
         Body.setVelocity(this.player, { x: 0, y: 0 });
-        this.lavaHeight += 800; // Extra breathing room
+
+        // SAFETY PLATFORM: Catch the player so they don't fall immediately
+        const safetyPlat = Bodies.rectangle(safeX, reviveY + 60, 250, 20, {
+            isStatic: true,
+            label: 'platform',
+            render: { fillStyle: '#00ff88', strokeStyle: '#fff', lineWidth: 2 }
+        });
+        World.add(this.world, safetyPlat);
+        this.platforms.push(safetyPlat); // Track it
+
+        // Huge lava buffer
+        this.lavaHeight += 1500;
         this.shake = 10;
+
+        // Force Camera Sync immediately to prevent visual glitch
+        // TargetY calculation from postProcess: -this.player.position.y + CONFIG.canvasHeight / 2 + 100
+        this.cameraY = -reviveY + CONFIG.canvasHeight / 2 + 100;
+
         this.createParticles(this.player.position, '#00ff88', 50);
     }
 
