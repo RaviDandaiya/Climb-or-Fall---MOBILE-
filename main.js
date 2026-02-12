@@ -1,3 +1,4 @@
+import Matter from 'matter-js';
 const { Engine, Render, Runner, World, Bodies, Body, Events, Vector, Composite } = Matter;
 
 const CONFIG = {
