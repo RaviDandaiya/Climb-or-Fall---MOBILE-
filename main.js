@@ -464,7 +464,7 @@ class Game {
     startAdRevive() {
         // Removed limit check
         document.getElementById('ad-prompt').classList.remove('hidden');
-        let timeLeft = 15;
+        let timeLeft = 60;
         const timerEl = document.getElementById('ad-timer');
         const skipBtn = document.getElementById('skip-ad-btn');
         skipBtn.classList.add('hidden');
@@ -488,7 +488,9 @@ class Game {
     revive() {
         // this.revivesLeft--; // No decrement for unlimited
         this.isGameOver = false;
-        Body.setPosition(this.player, { x: CONFIG.canvasWidth / 2, y: this.player.position.y - 300 });
+        // Resume closer to where fell, but ensure on screen
+        const safeX = Math.max(50, Math.min(CONFIG.canvasWidth - 50, this.player.position.x));
+        Body.setPosition(this.player, { x: safeX, y: this.player.position.y - 300 });
         Body.setVelocity(this.player, { x: 0, y: 0 });
         this.lavaHeight += 600; // Give breathing room
         this.shake = 10;
