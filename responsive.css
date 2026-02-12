@@ -1,0 +1,98 @@
+/* --- Mobile Responsive Fixes --- */
+@media (max-width: 768px) {
+
+    /* HUD Adjustments */
+    #ui-overlay {
+        top: 10px;
+        left: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    #ui-overlay .logo-text {
+        font-size: 1.8rem;
+        line-height: 0.9;
+        text-shadow: 0 0 10px rgba(255, 62, 62, 0.4);
+        margin-bottom: 5px;
+        text-align: left;
+    }
+
+    #ui-overlay .logo-text span {
+        font-size: 0.7rem;
+        letter-spacing: 3px;
+        margin-top: 2px;
+    }
+
+    /* Stats adjustments */
+    .hud-stats,
+    .currency-hud {
+        margin-bottom: 5px;
+        gap: 5px;
+    }
+
+    .stat-card {
+        padding: 5px 10px;
+        border-radius: 10px;
+    }
+
+    .stat-label {
+        font-size: 0.5rem;
+    }
+
+    .stat-value {
+        font-size: 1rem;
+    }
+
+    /* Start Screen Adjustments */
+    .menu-logo-container {
+        margin-bottom: 20px;
+    }
+
+    .game-logo-img {
+        width: 80px;
+        height: 80px;
+    }
+
+    .horror-title {
+        font-size: 2rem !important;
+        margin-bottom: 20px;
+    }
+
+    .menu-buttons {
+        flex-direction: column;
+        width: 80%;
+        gap: 10px;
+        max-height: 40vh;
+        /* Ensure it fits on short screens */
+        overflow-y: auto;
+        /* Allow scroll if extremely small */
+        padding: 5px;
+    }
+
+    .menu-btn {
+        width: 100%;
+        min-width: unset;
+        padding: 15px 20px;
+        flex-direction: row;
+        /* Horizontal layout for buttons on mobile */
+        justify-content: space-between;
+        align-items: center;
+        text-align: left;
+    }
+
+    .menu-btn::after {
+        display: none;
+        /* Simplify effects */
+    }
+
+    .menu-btn:hover {
+        transform: none;
+        /* Disable 3D tilt on mobile */
+    }
+
+    .btn-desc {
+        font-size: 0.6rem;
+        opacity: 0.8;
+    }
+}
