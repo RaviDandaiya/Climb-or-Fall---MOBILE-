@@ -140,6 +140,31 @@ class Game {
         document.addEventListener('keyup', (e) => this.keys[e.code] = false);
 
         window.addEventListener('resize', () => this.handleResize());
+
+        // --- Mobile Touch Controls ---
+        const addTouch = (id, key) => {
+            const btn = document.getElementById(id);
+            const activate = (e) => {
+                if (e.cancelable) e.preventDefault();
+                this.keys[key] = true;
+                btn.classList.add('active');
+            };
+            const deactivate = (e) => {
+                if (e.cancelable) e.preventDefault();
+                this.keys[key] = false;
+                btn.classList.remove('active');
+            };
+
+            btn.addEventListener('touchstart', activate, { passive: false });
+            btn.addEventListener('touchend', deactivate);
+            btn.addEventListener('mousedown', activate);
+            btn.addEventListener('mouseup', deactivate);
+            btn.addEventListener('mouseleave', deactivate);
+        };
+
+        addTouch('btn-left', 'ArrowLeft');
+        addTouch('btn-right', 'ArrowRight');
+        addTouch('btn-jump', 'Space');
     }
 
     updateHUD() {
