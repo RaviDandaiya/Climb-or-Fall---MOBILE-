@@ -23,7 +23,8 @@ const SKINS = [
     { id: 'crimson', name: 'Crimson', color: '#ff0044', price: 50 },
     { id: 'toxic', name: 'Toxic', color: '#00ff44', price: 100 },
     { id: 'frost', name: 'Frost', color: '#00ccff', price: 200 },
-    { id: 'gold', name: 'Gilded', color: '#ffcc00', price: 500 }
+    { id: 'gold', name: 'Gilded', color: '#ffcc00', price: 500 },
+    { id: 'xmas', name: 'Xmas', color: '#ff0000', price: 9999 } // Special skin
 ];
 
 // MANUAL HEARTBEAT FLAG
@@ -65,7 +66,8 @@ class Game {
         this.passLevel = parseInt(localStorage.getItem('passLevel')) || 1;
         this.passXP = parseInt(localStorage.getItem('passXP')) || 0;
 
-        this.revivesLeft = 1;
+        this.claimedRewards = JSON.parse(localStorage.getItem('claimedRewards')) || [];
+        this.revivesLeft = Infinity; // UNLIMITED REVIVES
         this.isGameOver = true;
         this.particles = [];
         this.shake = 0;
@@ -423,8 +425,9 @@ class Game {
         this.shake = 35;
         document.getElementById('fall-distance').innerText = this.maxHeight;
         document.getElementById('death-screen').classList.remove('hidden');
-        document.getElementById('ad-revive-btn').disabled = (this.revivesLeft <= 0);
-        document.getElementById('ad-revive-btn').innerText = `📺 REVIVE (${this.revivesLeft} LEFT)`;
+        // Unlimited revives, so always enabled
+        document.getElementById('ad-revive-btn').disabled = false;
+        document.getElementById('ad-revive-btn').innerText = `📺 REVIVE`;
 
         if (this.maxHeight > this.bestHeight) {
             this.bestHeight = this.maxHeight;
@@ -434,7 +437,7 @@ class Game {
     }
 
     startAdRevive() {
-        if (this.revivesLeft <= 0) return;
+        // Removed limit check
         document.getElementById('ad-prompt').classList.remove('hidden');
         let timeLeft = 15;
         const timerEl = document.getElementById('ad-timer');
@@ -458,7 +461,7 @@ class Game {
     }
 
     revive() {
-        this.revivesLeft--;
+        // this.revivesLeft--; // No decrement for unlimited
         this.isGameOver = false;
         Body.setPosition(this.player, { x: CONFIG.canvasWidth / 2, y: this.player.position.y - 300 });
         Body.setVelocity(this.player, { x: 0, y: 0 });
@@ -506,15 +509,58 @@ class Game {
         container.innerHTML = '';
         for (let i = 1; i <= 10; i++) {
             const isUnlocked = this.passLevel >= i;
+            const isClaimed = this.claimedRewards.includes(i);
             const reward = document.createElement('div');
-            reward.className = `reward-card ${isUnlocked ? 'unlocked' : ''}`;
+
+            // Add clickable class if unlocked and not claimed
+            const clickableClass = (isUnlocked && !isClaimed) ? 'clickable-reward' : '';
+
+            reward.className = `reward-card ${isUnlocked ? 'unlocked' : ''} ${clickableClass}`;
+
+            // Status Text Logic
+            let statusText = "LOCKED";
+            if (isClaimed) statusText = "✅ CLAIMED";
+            else if (isUnlocked) statusText = "👋 CLAIM";
+
             reward.innerHTML = `
                 <div class="stat-label">LVL ${i}</div>
-                <div style="font-size: 2rem">${i % 2 === 0 ? '🪙' : '👕'}</div>
-                <div class="stat-unit">${i % 2 === 0 ? '+100 Coins' : 'Xmas Skin'}</div>
+                <div style="font-size: 2rem">${i % 2 === 0 ? '👕' : '🪙'}</div>
+                <div class="stat-unit">${i % 2 === 0 ? 'Xmas Skin' : '+100 Coins'}</div>
+                <div style="font-size: 0.7rem; margin-top:5px; font-weight:bold; color:${isUnlocked && !isClaimed ? '#00ffa3' : '#666'}">${statusText}</div>
             `;
+
+            if (isUnlocked && !isClaimed) {
+                reward.style.cursor = 'pointer';
+                reward.onclick = () => this.claimReward(i);
+            }
+
             container.appendChild(reward);
         }
+    }
+
+    claimReward(level) {
+        if (this.claimedRewards.includes(level)) return;
+
+        // Reward Logic
+        if (level % 2 === 0) {
+            // Even levels = Skin
+            if (!this.ownedSkins.includes('xmas')) {
+                this.ownedSkins.push('xmas');
+                localStorage.setItem('ownedSkins', JSON.stringify(this.ownedSkins));
+                alert("UNLOCKED: XMAS SKIN!");
+            }
+        } else {
+            // Odd levels = Coins
+            this.coins += 100;
+            localStorage.setItem('coins', this.coins);
+        }
+
+        this.claimedRewards.push(level);
+        localStorage.setItem('claimedRewards', JSON.stringify(this.claimedRewards));
+
+        this.updateHUD();
+        this.renderPass();
+        this.renderSkins(); // Update skins if a skin was unlocked
     }
 
     drawWorldExt(ctx) {
