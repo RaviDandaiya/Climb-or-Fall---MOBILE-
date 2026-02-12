@@ -436,7 +436,7 @@ class Game {
     startAdRevive() {
         if (this.revivesLeft <= 0) return;
         document.getElementById('ad-prompt').classList.remove('hidden');
-        let timeLeft = 5;
+        let timeLeft = 15;
         const timerEl = document.getElementById('ad-timer');
         const skipBtn = document.getElementById('skip-ad-btn');
         skipBtn.classList.add('hidden');
