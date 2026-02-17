@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://ravidandaiya.github.io/Climb-or-Fall-/sitemap.xml
