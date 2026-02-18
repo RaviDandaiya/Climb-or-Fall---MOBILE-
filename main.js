@@ -1,5 +1,5 @@
 import Matter from 'matter-js';
-const { Engine, Render, Runner, World, Bodies, Body, Events, Vector, Composite } = Matter;
+const { Engine, Render, Runner, World, Bodies, Body, Events, Vector, Composite, Sleeping } = Matter;
 
 const CONFIG = {
     canvasWidth: window.innerWidth,
@@ -29,6 +29,10 @@ const SKINS = [
 
 // MANUAL HEARTBEAT FLAG
 let LOOP_ACTIVE = false;
+
+import { auth, googleProvider, db } from './firebase-config.js';
+import { signInWithPopup, signInAnonymously, onAuthStateChanged, signOut } from "firebase/auth";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 
 class Game {
     constructor() {
@@ -76,6 +80,7 @@ class Game {
         this.lavaSpeed = 0.6;
         this.lavaHeight = CONFIG.canvasHeight + 1000;
         this.isClimbing = false;
+        this.user = null; // Firebase User
 
         this.init();
     }
@@ -98,6 +103,20 @@ class Game {
         }
 
         Events.on(this.render, 'afterRender', () => this.postProcess());
+
+        // Auth State Observer
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                this.user = user;
+                console.log("User Authenticated:", user.uid);
+                // Automatically show menu if already logged in (optional, but good for refresh)
+                this.showMenu();
+            } else {
+                this.user = null;
+                document.getElementById('login-screen').classList.remove('hidden');
+                document.getElementById('difficulty-screen').classList.add('hidden');
+            }
+        });
     }
 
     loop() {
@@ -166,6 +185,37 @@ class Game {
         addTouch('btn-left', 'ArrowLeft');
         addTouch('btn-right', 'ArrowRight');
         addTouch('btn-jump', 'Space');
+
+        // --- Auth Listeners ---
+        document.getElementById('btn-google-login').onclick = () => this.handleGoogleLogin();
+        document.getElementById('btn-guest-login').onclick = () => this.handleGuestLogin();
+    }
+
+    handleGoogleLogin() {
+        signInWithPopup(auth, googleProvider)
+            .then((result) => {
+                console.log("Logged in:", result.user.displayName);
+                this.showMenu();
+            }).catch((error) => {
+                console.error("Login Failed:", error);
+                alert("Login Failed: " + error.message);
+            });
+    }
+
+    handleGuestLogin() {
+        signInAnonymously(auth)
+            .then(() => {
+                console.log("Logged in as Guest");
+                this.showMenu();
+            }).catch((error) => {
+                console.error("Guest Login Failed:", error);
+                alert("Guest Access Failed");
+            });
+    }
+
+    showMenu() {
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('difficulty-screen').classList.remove('hidden');
     }
 
     updateHUD() {
@@ -203,7 +253,7 @@ class Game {
 
         // Force Body Active
         Body.setStatic(this.player, false);
-        Body.setSleeping(this.player, false);
+        Sleeping.set(this.player, false);
 
         // Reset Gravity
         this.world.gravity.y = 1.35;
@@ -453,64 +503,33 @@ class Game {
         document.getElementById('death-screen').classList.remove('hidden');
         // Unlimited revives, so always enabled
         document.getElementById('ad-revive-btn').disabled = false;
-        document.getElementById('ad-revive-btn').innerText = `📺 REVIVE`;
+        document.getElementById('ad-revive-btn').disabled = false;
+        document.getElementById('ad-revive-btn').innerText = `REVIVE`;
 
         if (this.maxHeight > this.bestHeight) {
             this.bestHeight = this.maxHeight;
             localStorage.setItem('bestHeight', this.bestHeight);
             this.updateHUD();
         }
+
+        // Save Score to Firebase
+        if (this.user) {
+            this.saveScore(this.maxHeight);
+        }
     }
 
     startAdRevive() {
-        // Clear any existing timer
-        if (this.adInterval) clearInterval(this.adInterval);
-
-        document.getElementById('ad-prompt').classList.remove('hidden');
-        let timeLeft = 60;
-        const timerEl = document.getElementById('ad-timer');
-        const skipBtn = document.getElementById('skip-ad-btn');
-        timerEl.innerText = timeLeft;
-        skipBtn.classList.add('hidden');
-
-        this.adInterval = setInterval(() => {
-            timeLeft--;
-            timerEl.innerText = timeLeft;
-            if (timeLeft <= 0) {
-                clearInterval(this.adInterval);
-                skipBtn.classList.remove('hidden');
-            }
-        }, 1000);
-
-        const doRevive = (e) => {
-            if (e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-            try {
-                document.getElementById('ad-prompt').classList.add('hidden');
-                document.getElementById('death-screen').classList.add('hidden');
-                this.revive();
-            } catch (err) {
-                console.error("Revive Failed:", err);
-                alert("Game Error: " + err.message);
-                location.reload();
-            }
-        };
-
-        // Handle both Click and Touch for reliability using listeners
-        // Clean up old "onclick" which might linger
-        skipBtn.onclick = null;
-        skipBtn.ontouchstart = null;
-
-        // Remove prior listeners to avoid stacking if function called multiple times
-        // (Note: Anonymous functions can't be removed easily, but startAdRevive usually 
-        // runs once per death cycle. To be safe, we clone the node to strip listeners)
-        const newBtn = skipBtn.cloneNode(true);
-        skipBtn.parentNode.replaceChild(newBtn, skipBtn);
-
-        newBtn.addEventListener('click', doRevive);
-        newBtn.addEventListener('touchstart', doRevive, { passive: false });
+        console.log("Attempting Instant Revive...");
+        try {
+            // Instant Revive - No Ad, No Timer
+            document.getElementById('death-screen').classList.add('hidden');
+            document.getElementById('ad-prompt').classList.add('hidden');
+            this.revive();
+            console.log("Revive successful");
+        } catch (e) {
+            console.error("Revive Error:", e);
+            alert("Revive Failed: " + e.message);
+        }
     }
 
     revive() {
@@ -518,7 +537,7 @@ class Game {
 
         // Ensure Physics State is Active
         Body.setStatic(this.player, false);
-        Body.setSleeping(this.player, false);
+        Sleeping.set(this.player, false);
 
         // Resume closer to where fell
         // Ensure X is within safe bounds (padding)
@@ -750,6 +769,33 @@ class Game {
         if (this.player.position.y < highest + 600) {
             this.addPlatform(highest - (settings.gapHeight), this.platforms.length);
         }
+    }
+
+    saveScore(score) {
+        if (!this.user) return;
+        const userRef = doc(db, "scores", this.user.uid);
+
+        // Check if current score is better than stored
+        getDoc(userRef).then((docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                if (score > data.score) {
+                    setDoc(userRef, {
+                        uid: this.user.uid,
+                        displayName: this.user.displayName || "Guest",
+                        score: score,
+                        timestamp: new Date()
+                    }, { merge: true });
+                }
+            } else {
+                setDoc(userRef, {
+                    uid: this.user.uid,
+                    displayName: this.user.displayName || "Guest",
+                    score: score,
+                    timestamp: new Date()
+                });
+            }
+        }).catch((error) => console.error("Error saving score:", error));
     }
 
     handleResize() {
