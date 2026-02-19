@@ -30,9 +30,7 @@ const SKINS = [
 // MANUAL HEARTBEAT FLAG
 let LOOP_ACTIVE = false;
 
-import { auth, googleProvider, db } from './firebase-config.js';
-import { signInWithPopup, signInAnonymously, onAuthStateChanged, signOut } from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+// Firebase Imports REMOVED
 
 class Game {
     constructor() {
@@ -80,7 +78,7 @@ class Game {
         this.lavaSpeed = 0.6;
         this.lavaHeight = CONFIG.canvasHeight + 1000;
         this.isClimbing = false;
-        this.user = null; // Firebase User
+        this.user = null; // User system removed
 
         this.init();
     }
@@ -104,19 +102,7 @@ class Game {
 
         Events.on(this.render, 'afterRender', () => this.postProcess());
 
-        // Auth State Observer
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                this.user = user;
-                console.log("User Authenticated:", user.uid);
-                // Automatically show menu if already logged in (optional, but good for refresh)
-                this.showMenu();
-            } else {
-                this.user = null;
-                document.getElementById('login-screen').classList.remove('hidden');
-                document.getElementById('difficulty-screen').classList.add('hidden');
-            }
-        });
+        // Auth State Observer REMOVED
     }
 
     loop() {
@@ -187,34 +173,13 @@ class Game {
         addTouch('btn-jump', 'Space');
 
         // --- Auth Listeners ---
-        document.getElementById('btn-google-login').onclick = () => this.handleGoogleLogin();
-        document.getElementById('btn-guest-login').onclick = () => this.handleGuestLogin();
+        // Auth Listeners REMOVED
     }
 
-    handleGoogleLogin() {
-        signInWithPopup(auth, googleProvider)
-            .then((result) => {
-                console.log("Logged in:", result.user.displayName);
-                this.showMenu();
-            }).catch((error) => {
-                console.error("Login Failed:", error);
-                alert("Login Failed: " + error.message);
-            });
-    }
-
-    handleGuestLogin() {
-        signInAnonymously(auth)
-            .then(() => {
-                console.log("Logged in as Guest");
-                this.showMenu();
-            }).catch((error) => {
-                console.error("Guest Login Failed:", error);
-                alert("Guest Access Failed");
-            });
-    }
+    // Auth Handlers REMOVED
 
     showMenu() {
-        document.getElementById('login-screen').classList.add('hidden');
+        // Login screen removed, difficulty screen is default
         document.getElementById('difficulty-screen').classList.remove('hidden');
     }
 
@@ -772,30 +737,9 @@ class Game {
     }
 
     saveScore(score) {
-        if (!this.user) return;
-        const userRef = doc(db, "scores", this.user.uid);
-
-        // Check if current score is better than stored
-        getDoc(userRef).then((docSnap) => {
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                if (score > data.score) {
-                    setDoc(userRef, {
-                        uid: this.user.uid,
-                        displayName: this.user.displayName || "Guest",
-                        score: score,
-                        timestamp: new Date()
-                    }, { merge: true });
-                }
-            } else {
-                setDoc(userRef, {
-                    uid: this.user.uid,
-                    displayName: this.user.displayName || "Guest",
-                    score: score,
-                    timestamp: new Date()
-                });
-            }
-        }).catch((error) => console.error("Error saving score:", error));
+        // Firebase Cloud Save REMOVED
+        // Local persistence handled in triggerDeath via localStorage
+        console.log("Score saved locally:", score);
     }
 
     handleResize() {
