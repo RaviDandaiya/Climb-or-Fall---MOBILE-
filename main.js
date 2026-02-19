@@ -5,9 +5,9 @@ const CONFIG = {
     canvasWidth: window.innerWidth,
     canvasHeight: window.innerHeight,
     playerRadius: 18,
-    jumpForce: -29,
-    moveSpeed: 18,
-    maxHorizontalVelocity: 26,
+    jumpForce: -34,
+    moveSpeed: 24,
+    maxHorizontalVelocity: 32,
     platformWidth: 140,
     platformHeight: 25,
 };
@@ -200,16 +200,18 @@ class Game {
 
         Events.on(this.render, 'afterRender', () => this.postProcess());
 
-        // Auth State Observer
+        // DIRECT PLAY BYPASS: If no user, treat as local guest automatically
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 this.user = user;
                 console.log("User Authenticated:", user.uid);
                 this.showMenu();
             } else {
-                this.user = null;
-                document.getElementById('login-screen').classList.remove('hidden');
-                document.getElementById('difficulty-screen').classList.add('hidden');
+                // Auto-fallback to local guest for instant play
+                console.log("No User Found: Auto-entering Guest Mode");
+                this.isLocalGuest = true;
+                this.user = { uid: 'guest-' + Date.now() };
+                this.showMenu();
             }
         });
     }
@@ -666,8 +668,8 @@ class Game {
         const onGround = this.checkGrounded();
 
         // Horizontal Movement (Snappy Acceleration + Friction)
-        const accel = onGround ? 0.8 : 0.4;
-        const friction = onGround ? 0.85 : 0.95;
+        const accel = onGround ? 1.2 : 0.8;
+        const friction = onGround ? 0.82 : 0.92;
 
         let targetVx = 0;
         const lastSymbol = this.inputStack[this.inputStack.length - 1];
@@ -683,7 +685,7 @@ class Game {
         } else {
             // Apply friction to stop
             this.currentVx *= friction;
-            if (Math.abs(this.currentVx) < 0.1) this.currentVx = 0;
+            if (Math.abs(this.currentVx) < 0.5) this.currentVx = 0;
         }
 
         // Limit horizontal velocity
@@ -711,7 +713,7 @@ class Game {
             );
 
             this.jumpDebounce = true;
-            setTimeout(() => this.jumpDebounce = false, 200);
+            setTimeout(() => this.jumpDebounce = false, 100);
         }
 
         // Wall Climb Logic
