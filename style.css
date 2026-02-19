@@ -485,9 +485,16 @@ body {
   box-shadow: 0 0 30px rgba(0, 255, 163, 0.2);
 }
 
-.medium:hover {
-  border-color: var(--accent-blue);
-  box-shadow: 0 0 30px rgba(0, 209, 255, 0.2);
+.play-games:hover {
+  border-color: #00e676;
+  box-shadow: 0 0 30px rgba(0, 230, 118, 0.3);
+  background: rgba(0, 230, 118, 0.1);
+}
+
+.guest-mode:hover {
+  border-color: #888;
+  box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .hard:hover {

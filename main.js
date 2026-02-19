@@ -361,24 +361,28 @@ class Game {
     }
 
     handleGoogleLogin() {
+        // Rebranded as Play Games for Web
         signInWithPopup(auth, googleProvider)
             .then((result) => {
-                console.log("Logged in:", result.user.displayName);
+                console.log("Logged in with Google Play:", result.user.displayName);
                 this.showMenu();
             }).catch((error) => {
                 console.error("Login Failed:", error);
-                alert("Login Failed: " + error.message);
+                alert("Google Play Login Failed: " + error.message);
             });
     }
 
     handleGuestLogin() {
         signInAnonymously(auth)
             .then(() => {
-                console.log("Logged in as Guest");
+                console.log("Logged in as Firebase Guest");
+                this.isLocalGuest = false;
                 this.showMenu();
             }).catch((error) => {
-                console.error("Guest Login Failed:", error);
-                alert("Guest Access Failed: " + error.message);
+                console.warn("Firebase Guest Access Failed, falling back to Local Guest:", error.message);
+                this.isLocalGuest = true;
+                this.user = { uid: 'local-guest-' + Date.now() }; // Temporary ID for session
+                this.showMenu();
             });
     }
 
@@ -425,8 +429,8 @@ class Game {
     }
 
     startGame(diff) {
-        if (!this.user) {
-            alert("Please login to play!");
+        if (!this.user && !this.isLocalGuest) {
+            alert("Please login or use Guest Mode to play!");
             location.reload();
             return;
         }
@@ -1070,7 +1074,7 @@ class Game {
     }
 
     saveScore(score) {
-        if (!this.user) return;
+        if (!this.user || this.isLocalGuest) return;
         const userRef = doc(db, "scores", this.user.uid);
 
         // Check if current score is better than stored
