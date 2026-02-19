@@ -8,40 +8,32 @@
         display: flex;
         flex-direction: column;
         gap: 5px;
+        max-width: 150px;
     }
 
-    #ui-overlay .logo-text {
-        font-size: 1.8rem;
-        line-height: 0.9;
-        text-shadow: 0 0 10px rgba(255, 62, 62, 0.4);
-        margin-bottom: 5px;
-        text-align: left;
-    }
-
-    #ui-overlay .logo-text span {
-        font-size: 0.7rem;
-        letter-spacing: 3px;
-        margin-top: 2px;
-    }
-
-    /* Stats adjustments */
-    .hud-stats,
-    .currency-hud {
-        margin-bottom: 5px;
+    .hud-stats {
+        flex-direction: column;
         gap: 5px;
     }
 
-    .stat-card {
-        padding: 5px 10px;
-        border-radius: 10px;
+    /* Side Nav Adjustments */
+    #side-nav {
+        right: 15px;
+        top: 30%;
+        /* Move up to avoid mobile controls */
+        transform: translateY(-50%);
+        gap: 12px;
     }
 
-    .stat-label {
-        font-size: 0.5rem;
+    .nav-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.3rem;
     }
 
-    .stat-value {
-        font-size: 1rem;
+    #ui-overlay .logo-text {
+        font-size: 1.4rem;
+        margin-bottom: 2px;
     }
 
     /* Start Screen Adjustments */

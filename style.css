@@ -36,6 +36,39 @@ body {
   background: black;
 }
 
+#game-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* --- Floating Sparks Background --- */
+.screen-overlay::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.05) 1px, transparent 0);
+  background-size: 40px 40px;
+  mask-image: linear-gradient(to bottom, black, transparent);
+  pointer-events: none;
+  animation: sparkMove 20s linear infinite;
+}
+
+@keyframes sparkMove {
+  from {
+    background-position: 0 0;
+  }
+
+  to {
+    background-position: 0 1000px;
+  }
+}
+
 #game-canvas {
   width: 100%;
   height: 100%;
@@ -79,47 +112,109 @@ body {
 #ui-overlay {
   position: absolute;
   top: 20px;
-  left: 20px;
+  left: 0;
+  right: 0;
+  padding: 0 25px;
   pointer-events: none;
-  z-index: 100;
+  z-index: 1000;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+#game-logo-container {
+  display: none;
+  /* Hide large logo during gameplay */
 }
 
 .hud-stats,
 .currency-hud {
   display: flex;
   gap: 10px;
-  margin-bottom: 15px;
+  margin-bottom: 0;
 }
 
 .stat-card {
-  background: rgba(25, 25, 30, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  padding: 10px 20px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(15px) saturate(180%);
+  padding: 12px 24px;
+  border-radius: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
   display: flex;
-  flex-direction: column;
-  transition: transform 0.2s;
+  flex-direction: row;
+  align-items: center;
+  gap: 15px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.hud-stats .stat-card {
+  border-color: var(--theme-accent-glow, rgba(0, 209, 255, 0.3));
+  box-shadow: 0 0 20px var(--theme-accent-glow-shadow, rgba(0, 209, 255, 0.2));
+}
+
+.currency-hud .stat-card {
+  border-color: rgba(255, 204, 0, 0.3);
+  box-shadow: 0 0 20px rgba(255, 204, 0, 0.2);
 }
 
 .stat-card:hover {
-  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px);
 }
 
 .stat-label {
-  font-size: 0.6rem;
+  font-size: 0.65rem;
+  font-weight: 900;
   text-transform: uppercase;
   color: var(--text-secondary);
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
+  opacity: 0.8;
 }
 
 .stat-value {
-  font-size: 1.4rem;
-  font-weight: 800;
+  font-size: 1.6rem;
+  font-weight: 950;
+  letter-spacing: -1px;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.hud-stats .stat-value {
+  color: var(--theme-accent-color, #00d1ff);
+  text-shadow: 0 0 15px var(--theme-accent-glow-shadow, rgba(0, 209, 255, 0.4));
+}
+
+.currency-hud .stat-value {
+  color: var(--accent-gold);
+  text-shadow: 0 0 15px rgba(255, 204, 0, 0.4);
+}
+
+.stat-unit {
+  font-size: 0.8rem;
+  margin-left: 2px;
+  opacity: 0.6;
+}
+
+/* Update Pulse Animation */
+@keyframes hudPulse {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.15);
+    filter: brightness(1.5);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.pulse-animation {
+  animation: hudPulse 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 /* --- Menu Overlays --- */
@@ -443,4 +538,125 @@ body {
 #retry-button:hover {
   background: rgba(255, 255, 255, 0.1);
   transform: scale(1.05);
+}
+
+/* --- Level Up Toast --- */
+#level-up-toast {
+  position: absolute;
+  top: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(157, 0, 255, 0.9);
+  backdrop-filter: blur(15px);
+  padding: 20px 60px;
+  border-radius: 50px;
+  border: 2px solid var(--accent-gold);
+  text-align: center;
+  z-index: 5000;
+  animation: toastIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards, toastOut 0.5s 2.5s forwards;
+  box-shadow: 0 0 50px rgba(255, 204, 0, 0.4);
+}
+
+.toast-title {
+  color: #fff;
+  font-weight: 900;
+  margin-bottom: 5px;
+  letter-spacing: 2px;
+}
+
+.toast-desc {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.8rem;
+}
+
+@keyframes toastIn {
+  0% {
+    transform: translateX(-50%) translateY(-100px) scale(0.8);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translateX(-50%) translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes toastOut {
+  0% {
+    transform: translateX(-50%) translateY(0) scale(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateX(-50%) translateY(-50px) scale(0.8);
+    opacity: 0;
+  }
+}
+
+/* --- Premium Overlays --- */
+.screen-overlay {
+  background: radial-gradient(circle at center, rgba(13, 13, 18, 0.85) 0%, rgba(0, 0, 0, 0.98) 100%);
+  backdrop-filter: blur(25px);
+}
+
+.horror-title {
+  text-shadow: 0 0 40px rgba(255, 255, 255, 0.3);
+  animation: titleGlow 3s infinite ease-in-out;
+}
+
+@keyframes titleGlow {
+
+  0%,
+  100% {
+    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.2));
+  }
+
+  50% {
+    filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.5));
+  }
+}
+
+.death-stats {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 40px;
+  border-radius: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 30px 0;
+  transform: skewX(-5deg);
+}
+
+.death-stat-label {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.death-stat-value {
+  font-size: 4rem;
+  font-weight: 900;
+  color: var(--accent-red);
+  text-shadow: 0 0 30px rgba(255, 62, 62, 0.5);
+}
+
+.horror-text {
+  font-family: var(--font-horror);
+  font-size: 8rem;
+  color: #fff;
+  text-shadow: 0 0 50px rgba(255, 255, 255, 0.2);
+  margin-bottom: -20px;
+}
+
+/* Scrollbar Fix */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
 }

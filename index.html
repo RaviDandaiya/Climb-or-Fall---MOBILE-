@@ -71,7 +71,7 @@
 <body>
     <div id="game-container">
         <!-- Main Game HUD -->
-        <div id="ui-overlay">
+        <div id="ui-overlay" class="hidden">
             <div id="game-logo-container">
                 <h1 class="logo-text">CLIMB<br><span>OR FALL</span></h1>
             </div>
@@ -94,7 +94,7 @@
         </div>
 
         <!-- Navigation Sidebar -->
-        <div id="side-nav">
+        <div id="side-nav" class="hidden">
             <button class="nav-icon" id="btn-shop">👕</button>
             <button class="nav-icon" id="btn-pass">⚔️</button>
         </div>
@@ -237,6 +237,11 @@
             <div class="control-group right">
                 <button id="btn-jump" class="control-btn">↑</button>
             </div>
+        </div>
+
+        <div id="level-up-toast" class="hidden">
+            <h2 class="toast-title">LEVEL UP!</h2>
+            <p class="toast-desc">Unlocked a new reward</p>
         </div>
 
         <canvas id="game-canvas"></canvas>
