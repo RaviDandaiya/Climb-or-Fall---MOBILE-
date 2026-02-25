@@ -3,18 +3,19 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Climb-or-Fall | Ultimate Rage Platformer</title>
     <link rel="icon" type="image/svg+xml" href="./logo.svg">
+    <link rel="manifest" href="./manifest.json">
 
     <meta name="google-adsense-account" content="ca-pub-5820888942116492">
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5820888942116492"
         crossorigin="anonymous"></script>
     <!-- SEO Meta Tags -->
     <meta name="description"
-        content="Climb-or-Fall: A high-intensity 2D physics rage platformer. Scale the infinite tower, unlock skins, and complete the battle pass. Can you reach the top?">
+        content="Climb-or-Fall: The ultimate high-intensity 2D physics rage platformer. Challenge yourself in this infinite tower climber. Unlock exclusive skins, complete the battle pass, and climb to glory. Perfect for fans of challenging skill games!">
     <meta name="keywords"
-        content="Climb-or-Fall, rage game, platformer, 2d game, physics game, tower climb, free online game, skill game, browser game, infinite climber, challenge game, Ravi Dandaiya">
+        content="Climb-or-Fall, rage game, hard platformer, 2D physics game, infinite climber, tower climb game, skill based game, addictive platformer, challenge platformer, doodle jump style, infinite runner, mobile rage game, Ravi Dandaiya, Ravi Dandaiya Games, competitive platformer">
     <meta name="author" content="Ravi Dandaiya">
 
     <!-- Open Graph / Facebook -->
@@ -72,24 +73,35 @@
     <div id="game-container">
         <!-- Main Game HUD -->
         <div id="ui-overlay">
-            <div id="game-logo-container">
-                <h1 class="logo-text">CLIMB<br><span>OR FALL</span></h1>
-            </div>
-            <div class="hud-stats">
-                <div class="stat-card">
-                    <span class="stat-label">Elevation</span>
-                    <span class="stat-value"><span id="height-value">0</span><span class="stat-unit">m</span></span>
+            <div class="hud-top-left">
+
+                <div class="hud-stats">
+                    <div class="stat-card">
+                        Score: <span id="height-value">0</span>
+                    </div>
+                    <div class="stat-card">
+                        Best: <span id="best-value">0</span>
+                    </div>
+                    <div class="stat-card">
+                        Combo: x<span id="combo-value">1</span>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <span class="stat-label">Best</span>
-                    <span class="stat-value"><span id="best-value">0</span><span class="stat-unit">m</span></span>
-                </div>
             </div>
-            <div class="currency-hud">
-                <div class="stat-card">
-                    <span class="stat-label">Coins</span>
+            <div class="hud-top-right">
+                <div class="stat-card coin-card">
                     <span class="stat-value">🪙 <span id="coin-count">0</span></span>
                 </div>
+            </div>
+        </div>
+
+        <!-- Mobile Controls (Left/Right/Jump) -->
+        <div id="mobile-controls">
+            <div class="control-group left">
+                <button class="control-btn" id="btn-left">←</button>
+                <button class="control-btn" id="btn-right">→</button>
+            </div>
+            <div class="control-group right">
+                <button class="control-btn" id="btn-jump">↑</button>
             </div>
         </div>
 
@@ -107,7 +119,18 @@
                 <img src="./logo.svg" class="game-logo-img" alt="Climb-or-Fall Rage Platformer Game Logo">
                 <h1 class="logo-text">CLIMB<br><span>OR FALL</span></h1>
             </div>
-            <h1 class="horror-title" style="font-size: 3rem; margin-top: 20px;">CHOOSE FATE</h1>
+
+
+
+            <div class="controls-setup-box">
+                <span class="setup-label">CONTROLS</span>
+                <div class="toggle-container">
+                    <button id="btn-touch-mode" class="toggle-btn active">👆 TOUCH</button>
+                    <button id="btn-tilt-mode" class="toggle-btn">📱 TILT</button>
+                </div>
+            </div>
+
+            <h1 class="horror-title" style="font-size: 3rem; margin-top: 10px;">CHOOSE FATE</h1>
             <div class="menu-buttons">
                 <button class="menu-btn easy" data-difficulty="easy">
                     EASY
@@ -121,6 +144,11 @@
                     HARD
                     <span class="btn-desc">Pure agony</span>
                 </button>
+            </div>
+            <div class="legal-links">
+                <a href="privacy-policy.html" target="_blank">Privacy Policy</a>
+                <span>|</span>
+                <a href="terms-conditions.html" target="_blank">Terms & Conditions</a>
             </div>
         </div>
 
@@ -148,44 +176,11 @@
             </div>
         </div>
 
-        <!-- Reward Ad Simulation -->
-        <div id="ad-prompt" class="screen-overlay hidden">
-            <div class="ad-box">
-                <h2>REVIVE REQUIRED</h2>
-                <p>Support us to continue your climb!</p>
-                <div class="ad-sim-timer" id="ad-timer">60</div> <!-- reduced timer for actual ads -->
-
-                <div style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
-                    <!-- Ad Slot 1 -->
-                    <div
-                        style="min-width: 300px; min-height: 250px; background: #222; display: flex; align-items: center; justify-content: center; color: #555;">
-                        <!-- Replace data-ad-slot with your actual ad unit ID from AdSense -->
-                        <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-5820888942116492"
-                            data-ad-slot="7617065593" data-ad-format="auto" data-full-width-responsive="true"></ins>
-                        <script>
-                            (adsbygoogle = window.adsbygoogle || []).push({});
-                        </script>
-                    </div>
-
-                    <!-- Ad Slot 2 -->
-                    <div
-                        style="min-width: 300px; min-height: 250px; background: #222; display: flex; align-items: center; justify-content: center; color: #555;">
-                        <!-- Replace data-ad-slot with your actual ad unit ID from AdSense -->
-                        <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-5820888942116492"
-                            data-ad-slot="7617065593" data-ad-format="auto" data-full-width-responsive="true"></ins>
-                        <script>
-                            (adsbygoogle = window.adsbygoogle || []).push({});
-                        </script>
-                    </div>
-                </div>
-
-                <button id="skip-ad-btn" class="hidden" style="margin-top: 20px;">CLAIM REVIVE</button>
-            </div>
-        </div>
-
         <!-- Death Screen -->
         <div id="death-screen" class="screen-overlay hidden">
             <h1 class="horror-text">SHATTERED</h1>
+            <p class="death-advice">Skill issue? Don't fall next time.</p>
+
             <div class="death-stats">
                 <div class="death-stat">
                     <div class="death-stat-label">Score</div>
@@ -196,31 +191,9 @@
                 <button id="ad-revive-btn">REVIVE</button>
                 <button id="retry-button">RESTART</button>
             </div>
-
-            <div style="margin-top: 20px; width: 100%; display: flex; justify-content: center;">
-                <!-- Game Over Ad Slot -->
-                <div
-                    style="min-width: 320px; min-height: 100px; background: #222; display: flex; align-items: center; justify-content: center; color: #555;">
-                    <!-- Replace data-ad-slot with your actual ad unit ID from AdSense -->
-                    <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-5820888942116492"
-                        data-ad-slot="7617065593" data-ad-format="auto" data-full-width-responsive="true"></ins>
-                    <script>
-                        (adsbygoogle = window.adsbygoogle || []).push({});
-                    </script>
-                </div>
-            </div>
         </div>
 
-        <!-- Mobile Controls -->
-        <div id="mobile-controls">
-            <div class="control-group left">
-                <button id="btn-left" class="control-btn">←</button>
-                <button id="btn-right" class="control-btn">→</button>
-            </div>
-            <div class="control-group right">
-                <button id="btn-jump" class="control-btn">↑</button>
-            </div>
-        </div>
+
 
         <canvas id="game-canvas"></canvas>
     </div>
