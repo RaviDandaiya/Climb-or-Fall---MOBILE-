@@ -2,18 +2,24 @@
 @media (max-width: 768px) {
 
     /* HUD Adjustments */
-    #ui-overlay {
-        top: 10px;
+    .hud-top-left {
         left: 10px;
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-        max-width: 150px;
+        top: 10px;
+        gap: 8px;
+    }
+
+    .hud-top-right {
+        right: 10px;
+        top: 10px;
     }
 
     .hud-stats {
-        flex-direction: column;
         gap: 5px;
+    }
+
+    .stat-card {
+        padding: 5px 12px;
+        font-size: 0.8rem;
     }
 
     /* Side Nav Adjustments */
@@ -87,4 +93,6 @@
         font-size: 0.6rem;
         opacity: 0.8;
     }
+
+
 }

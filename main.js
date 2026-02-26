@@ -127,6 +127,7 @@ class Game {
                     // Update Physics at a fixed timestep for consistency across devices
                     Engine.update(this.engine, 16.666);
                     this.update();
+                    this.createCuteTrail();
                 }
 
                 this.renderWorldManual();
@@ -198,6 +199,7 @@ class Game {
         const btnLeft = document.getElementById('btn-left');
         const btnRight = document.getElementById('btn-right');
         const btnJump = document.getElementById('btn-jump');
+        const btnPower = document.getElementById('btn-power');
 
         const bindButton = (btn, key) => {
             if (!btn) return;
@@ -214,16 +216,16 @@ class Game {
                 this.keys[key] = false;
                 if (btn.classList) btn.classList.remove('active');
             };
-            btn.addEventListener('touchstart', down, { passive: false });
-            btn.addEventListener('touchend', up, { passive: false });
-            btn.addEventListener('mousedown', down);
-            btn.addEventListener('mouseup', up);
-            btn.addEventListener('mouseleave', up);
+            btn.addEventListener('pointerdown', down);
+            btn.addEventListener('pointerup', up);
+            btn.addEventListener('pointercancel', up);
+            btn.addEventListener('pointerleave', up);
         };
 
         bindButton(btnLeft, 'ArrowLeft');
         bindButton(btnRight, 'ArrowRight');
         bindButton(btnJump, 'TouchJump');
+        bindButton(btnPower, 'PowerDash');
 
         this.gyroGamma = 0;
         window.addEventListener('deviceorientation', (e) => {
@@ -266,22 +268,20 @@ class Game {
         }
 
         const handleTapJumpStart = (e) => {
-            if (this.controlMode === 'tilt') {
+            // Always allow canvas tap to act as jump (perfect for hyper-casual)
+            if (e.target.tagName !== 'BUTTON') {
                 e.preventDefault();
                 this.keys['TouchJump'] = true;
                 if (this.audio && this.audio.state === 'suspended') this.audio.resume();
             }
         };
         const handleTapJumpEnd = (e) => {
-            if (this.controlMode === 'tilt') {
-                this.keys['TouchJump'] = false;
-            }
+            this.keys['TouchJump'] = false;
         };
-        this.canvas.addEventListener('touchstart', handleTapJumpStart, { passive: false });
-        this.canvas.addEventListener('mousedown', handleTapJumpStart);
-        this.canvas.addEventListener('touchend', handleTapJumpEnd, { passive: false });
-        this.canvas.addEventListener('mouseup', handleTapJumpEnd);
-        this.canvas.addEventListener('mouseleave', handleTapJumpEnd);
+        this.canvas.addEventListener('pointerdown', handleTapJumpStart);
+        this.canvas.addEventListener('pointerup', handleTapJumpEnd);
+        this.canvas.addEventListener('pointercancel', handleTapJumpEnd);
+        this.canvas.addEventListener('pointerleave', handleTapJumpEnd);
     }
 
     showMenu() {
@@ -314,6 +314,8 @@ class Game {
         this.platforms = [];
         this.enemies = [];
         this.particles = [];
+        this.dashCooldown = 0;
+        this.isDashingFrames = 0;
         this.createPlayer();
         this.createStartPlatform();
         this.generateInitialPlatforms(settings);
@@ -362,9 +364,9 @@ class Game {
         if (this.isGameOver) return;
 
         if (isPillar) {
-            const height = 15 + Math.random() * 25;
+            const height = 100 + Math.random() * 150; // Taller green pillars
             const x = Math.random() * (CONFIG.canvasWidth - 80) + 40;
-            const pillar = Bodies.rectangle(x, y, 40, height, { isStatic: true, label: 'platform', render: { visible: false } });
+            const pillar = Bodies.rectangle(x, y, 40, height, { isStatic: true, label: 'pillar', render: { visible: false } });
             if (this.maxHeight > 500 && Math.random() < 0.6) {
                 pillar.isMoving = true;
                 pillar.moveSpeed = (Math.random() < 0.5 ? 1 : -1) * (1.5 + Math.random() * 2);
@@ -429,6 +431,9 @@ class Game {
         collisions.forEach(collision => {
             const other = collision.bodyA === this.player ? collision.bodyB : collision.bodyA;
             if (other.label === 'coin') this.collectCoin(other);
+            else if (this.isDashingFrames > 0 && (other.label === 'enemy' || other.label === 'hazard' || other.label === 'pillar')) {
+                // Invincible during dash, simply ignore
+            }
             else if (other.label === 'enemy') this.triggerDeath("SLAIN BY A FOE");
             else if (other.label === 'hazard' && this.player.velocity.y > 0) this.triggerDeath("CATASTROPHE");
         });
@@ -481,6 +486,45 @@ class Game {
         }
         if (this.keys['ArrowLeft'] || this.keys['KeyA']) targetVx = -baseSpeed;
         else if (this.keys['ArrowRight'] || this.keys['KeyD']) targetVx = baseSpeed;
+
+        if (this.dashCooldown > 0) this.dashCooldown--;
+        if (this.isDashingFrames > 0) {
+            this.isDashingFrames--;
+            this.createCuteTrail(); // Intense trail
+        }
+
+        if ((this.keys['PowerDash'] || this.keys['KeyE'] || this.keys['ShiftLeft']) && this.dashCooldown <= 0) {
+            Body.setVelocity(this.player, { x: targetVx, y: -40 });
+            this.keys['PowerDash'] = false; this.keys['KeyE'] = false; this.keys['ShiftLeft'] = false;
+            this.isDashingFrames = 25; // Invincible Dash time
+            this.dashCooldown = 250;
+            this.createExplosion(this.player.position, '#00ff88', 25);
+            this.playJump();
+
+            // Erase visible red hazards & enemies instantly
+            const scale = this.canvas.width / CONFIG.canvasWidth;
+            const viewTop = -this.cameraY - (this.canvas.height / scale) * 0.2;
+            const viewBottom = -this.cameraY + (this.canvas.height / scale) * 1.5;
+
+            for (let i = this.enemies.length - 1; i >= 0; i--) {
+                const e = this.enemies[i];
+                if (e.position.y > viewTop && e.position.y < viewBottom) {
+                    World.remove(this.world, e);
+                    this.createExplosion(e.position, '#ff2200', 30);
+                    this.addXP(30);
+                    this.enemies.splice(i, 1);
+                }
+            }
+            for (let i = this.platforms.length - 1; i >= 0; i--) {
+                const p = this.platforms[i];
+                if (p.label === 'hazard' && p.position.y > viewTop && p.position.y < viewBottom) {
+                    World.remove(this.world, p);
+                    this.createExplosion(p.position, '#ff2200', 30);
+                    this.addXP(30);
+                    this.platforms.splice(i, 1);
+                }
+            }
+        }
 
         if (targetVx !== 0) Body.setVelocity(this.player, { x: targetVx, y: vel.y });
         else Body.setVelocity(this.player, { x: vel.x * 0.8, y: vel.y });
@@ -640,8 +684,11 @@ class Game {
         const ctx = this.ctx;
         if (!ctx) return;
 
-        // 1. Clear with gradient background
-        const grad = ctx.createLinearGradient(0, 0, 0, Math.max(window.innerHeight, this.canvas.height));
+        // 1. Clear with animated gradient background
+        const bgTime = performance.now() / 2000;
+        const bgOffset1 = Math.sin(bgTime) * 300;
+        const bgOffset2 = Math.cos(bgTime) * 300;
+        const grad = ctx.createLinearGradient(0, bgOffset1, 0, Math.max(window.innerHeight, this.canvas.height) + bgOffset2);
         grad.addColorStop(0, this.currentTheme.bg[0]);
         grad.addColorStop(1, this.currentTheme.bg[1]);
         ctx.fillStyle = grad;
@@ -695,6 +742,15 @@ class Game {
             if (p.label === 'platform') {
                 const w = p.bounds.max.x - p.bounds.min.x;
                 ctx.drawImage(this.platformCanvas, 5, 5, 190, 15, p.position.x - w / 2, p.position.y - 6, w, 15);
+            } else if (p.label === 'pillar') {
+                const w = p.bounds.max.x - p.bounds.min.x;
+                const h = p.bounds.max.y - p.bounds.min.y;
+                ctx.fillStyle = '#00af50';
+                ctx.strokeStyle = '#00ff88';
+                ctx.lineWidth = 3;
+                this.roundRect(ctx, p.bounds.min.x, p.bounds.min.y, w, h, 8);
+                ctx.fill();
+                ctx.stroke();
             } else if (p.label === 'hazard') {
                 ctx.fillStyle = '#ff2200';
                 ctx.fillRect(p.bounds.min.x, p.position.y - 6, p.bounds.max.x - p.bounds.min.x, 15);
@@ -798,12 +854,31 @@ class Game {
             // Draw upright Features (Eyes & thick lines for hands)
             ctx.fillStyle = '#ffffff';
 
-            // Eyes
+            // Eyes (with cute blinking animation)
             const eyeSpacing = 6;
+            const isBlinking = (performance.now() % 3500) < 150 || (velY < 0.5 && (performance.now() % 2000) < 100);
+
+            if (isBlinking) {
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(-eyeSpacing - 4, -2);
+                ctx.lineTo(-eyeSpacing + 4, -2);
+                ctx.moveTo(eyeSpacing - 4, -2);
+                ctx.lineTo(eyeSpacing + 4, -2);
+                ctx.stroke();
+            } else {
+                ctx.beginPath();
+                ctx.arc(-eyeSpacing, -2, 5.5, 0, Math.PI * 2); // Left Eye
+                ctx.arc(eyeSpacing, -2, 5.5, 0, Math.PI * 2); // Right Eye
+                ctx.fill();
+            }
+
+            // Add tiny blush for cuteness
+            ctx.fillStyle = 'rgba(255, 100, 150, 0.6)';
             ctx.beginPath();
-            // Using arc for perfectly round eyes like in the image
-            ctx.arc(-eyeSpacing, -2, 5.5, 0, Math.PI * 2); // Left Eye
-            ctx.arc(eyeSpacing, -2, 5.5, 0, Math.PI * 2); // Right Eye
+            ctx.arc(-eyeSpacing - 4, 3, 3.5, 0, Math.PI * 2);
+            ctx.arc(eyeSpacing + 4, 3, 3.5, 0, Math.PI * 2);
             ctx.fill();
 
             // Hands (thick lines pointing outwards/downwards)
@@ -858,6 +933,22 @@ class Game {
         }
     }
 
+    createCuteTrail() {
+        if (!this.player || this.isGameOver) return;
+        const speedSq = this.player.velocity.x * this.player.velocity.x + this.player.velocity.y * this.player.velocity.y;
+        if (speedSq > 5 && Math.random() < 0.3) {
+            const p = this.particlePool.pop() || {};
+            p.x = this.player.position.x + (Math.random() - 0.5) * 20;
+            p.y = this.player.position.y + (Math.random() - 0.5) * 20;
+            p.vx = (Math.random() - 0.5) * 2;
+            p.vy = (Math.random() - 0.5) * 2;
+            p.life = 1;
+            const skin = SKINS.find(s => s.id === this.activeSkinId);
+            p.color = skin ? skin.color : '#ffffff';
+            this.particles.push(p);
+        }
+    }
+
     _playTone(freq, type = 'sine', when = 0, duration = 0.08) {
         if (!this.audio) return;
         try {
@@ -887,7 +978,8 @@ class Game {
         if (!this.player || this.isGameOver) return;
         const ly = this.lavaHeight + 500, py = this.player.position.y;
         for (let i = this.platforms.length - 1; i >= 0; i--) {
-            if (this.platforms[i].position.y > ly) {
+            // Cull platforms below lava OR far below the player (fixes the 40-cap generation bug)
+            if (this.platforms[i].position.y > Math.min(ly, py + 1500)) {
                 World.remove(this.world, this.platforms[i]); this.platforms.splice(i, 1);
             }
         }

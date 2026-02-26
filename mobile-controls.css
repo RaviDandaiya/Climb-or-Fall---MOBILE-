@@ -1,20 +1,14 @@
 /* Mobile Controls */
 #mobile-controls {
     position: absolute;
-    bottom: 20px;
-    left: 0;
-    width: 100%;
-    height: 150px;
-    display: flex;
-    justify-content: space-between;
-    padding: 0 40px;
+    inset: 0;
+    /* Cover entire screen */
     pointer-events: none;
-    /* Let touches pass through container */
     z-index: 100;
 }
 
-/* Hide controls on desktop by default, show on touch devices via media query */
-@media (hover: hover) and (pointer: fine) {
+/* Hide controls on desktop by default, show on small screens */
+@media (min-width: 800px) {
     #mobile-controls {
         display: none;
     }
@@ -22,22 +16,37 @@
 
 .control-group {
     display: flex;
-    gap: 20px;
+    gap: 12px;
     align-items: flex-end;
     pointer-events: auto;
-    /* Re-enable clicks on buttons */
+}
+
+.control-group.left {
+    position: absolute;
+    left: 12px;
+    bottom: calc(env(safe-area-inset-bottom, 12px) + 12px);
+    margin-left: 0;
+    pointer-events: auto;
+}
+
+.control-group.right {
+    position: absolute;
+    right: 12px;
+    bottom: calc(env(safe-area-inset-bottom, 12px) + 12px);
+    margin-right: 0;
+    pointer-events: auto;
 }
 
 .control-btn {
-    width: 80px;
-    height: 80px;
+    width: 56px;
+    height: 56px;
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border: 2px solid rgba(255, 255, 255, 0.2);
     border-radius: 50%;
     color: white;
-    font-size: 2rem;
+    font-size: 1.4rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -54,14 +63,52 @@
 }
 
 #btn-jump {
-    width: 100px;
+    width: 72px;
     /* Slightly larger jump button */
-    height: 100px;
-    background: rgba(157, 0, 255, 0.2);
-    border-color: rgba(157, 0, 255, 0.4);
+    height: 72px;
+    background: rgba(157, 0, 255, 0.12);
+    border-color: rgba(157, 0, 255, 0.28);
+    box-shadow: 0 8px 20px rgba(157, 0, 255, 0.06);
 }
 
 #btn-jump:active,
 #btn-jump.active {
     background: rgba(157, 0, 255, 0.4);
+}
+
+#btn-power {
+    background: rgba(0, 255, 136, 0.12);
+    border-color: rgba(0, 255, 136, 0.28);
+    box-shadow: 0 8px 20px rgba(0, 255, 136, 0.06);
+}
+
+#btn-power:active,
+#btn-power.active {
+    background: rgba(0, 255, 136, 0.4);
+}
+
+/* Center mobile controls for very small screens */
+@media (max-width: 420px) {
+    #mobile-controls {
+        padding: 0 12px;
+    }
+
+    .control-group.left {
+        margin-left: 8px;
+    }
+
+    .control-group.right {
+        margin-right: 8px;
+    }
+
+    .control-btn {
+        width: 48px;
+        height: 48px;
+        font-size: 1.0rem;
+    }
+
+    #btn-jump {
+        width: 60px;
+        height: 60px;
+    }
 }

@@ -1,0 +1,16 @@
+{
+  "name": "Climb-or-Fall",
+  "short_name": "Climb-or-Fall",
+  "description": "A high-intensity 2D physics rage platformer.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#07070a",
+  "theme_color": "#07070a",
+  "icons": [
+    {
+      "src": "./logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512"
+    }
+  ]
+}
