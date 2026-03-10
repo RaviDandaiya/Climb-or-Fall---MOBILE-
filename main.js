@@ -739,11 +739,18 @@ class Game {
         if (this.isGameOver) return;
         this.isGameOver = true; this.shake = 30;
         document.getElementById('fall-distance').innerText = this.maxHeight;
-        document.getElementById('death-screen').classList.remove('hidden');
+        
+        const reasonEl = document.getElementById('death-reason');
+        if (reasonEl) reasonEl.innerText = reason || "Skill issue? Try again.";
+
         if (this.maxHeight > this.bestHeight) {
             this.bestHeight = this.maxHeight; localStorage.setItem('bestHeight', this.bestHeight);
             this.updateHUD();
         }
+        const bestDeathEl = document.getElementById('best-distance-death');
+        if (bestDeathEl) bestDeathEl.innerText = this.bestHeight;
+
+        document.getElementById('death-screen').classList.remove('hidden');
 
         const btn = document.getElementById('ad-revive-btn');
         if (this.revivesLeft > 0) {

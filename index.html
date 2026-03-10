@@ -187,18 +187,28 @@
 
         <!-- Death Screen -->
         <div id="death-screen" class="screen-overlay hidden">
-            <h1 class="horror-text">SHATTERED</h1>
-            <p class="death-advice">Skill issue? Don't fall next time.</p>
+            <div class="death-card">
+                <h1 class="modern-death-title">GAME OVER</h1>
+                <p class="death-reason-text" id="death-reason">Skill issue? Don't fall next time.</p>
 
-            <div class="death-stats">
-                <div class="death-stat">
-                    <div class="death-stat-label">Score</div>
-                    <div class="death-stat-value" id="fall-distance">0</div>
+                <div class="death-stats-modern">
+                    <div class="death-stat-box">
+                        <div class="death-stat-label">SCORE</div>
+                        <div class="death-stat-value" id="fall-distance">0</div>
+                    </div>
+                    <div class="death-stat-box primary-stat">
+                        <div class="death-stat-label">BEST</div>
+                        <div class="death-stat-value" id="best-distance-death">0</div>
+                    </div>
                 </div>
-            </div>
-            <div class="death-actions">
-                <button id="ad-revive-btn">REVIVE</button>
-                <button id="retry-button">RESTART</button>
+                <div class="death-actions-modern">
+                    <button class="modern-btn action-revive" id="ad-revive-btn">
+                        <span>▶</span> REVIVE
+                    </button>
+                    <button class="modern-btn action-retry" id="retry-button">
+                        <span>↺</span> RESTART
+                    </button>
+                </div>
             </div>
         </div>
 
