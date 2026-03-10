@@ -188,25 +188,38 @@
         <!-- Death Screen -->
         <div id="death-screen" class="screen-overlay hidden">
             <div class="death-card">
-                <h1 class="modern-death-title">GAME OVER</h1>
-                <p class="death-reason-text" id="death-reason">Skill issue? Don't fall next time.</p>
+                <div class="death-header">
+                    <h1 class="modern-death-title">GAME OVER</h1>
+                    <p class="death-reason-text" id="death-reason">Skill issue? Don't fall next time.</p>
+                </div>
 
                 <div class="death-stats-modern">
                     <div class="death-stat-box">
-                        <div class="death-stat-label">SCORE</div>
-                        <div class="death-stat-value" id="fall-distance">0</div>
+                        <div class="death-stat-icon">📈</div>
+                        <div class="death-stat-content">
+                            <div class="death-stat-label">SCORE</div>
+                            <div class="death-stat-value" id="fall-distance">0</div>
+                        </div>
                     </div>
                     <div class="death-stat-box primary-stat">
-                        <div class="death-stat-label">BEST</div>
-                        <div class="death-stat-value" id="best-distance-death">0</div>
+                        <div class="death-stat-icon prize-icon">🏆</div>
+                        <div class="death-stat-content">
+                            <div class="death-stat-label text-gold">BEST SCORE</div>
+                            <div class="death-stat-value text-gold" id="best-distance-death">0</div>
+                        </div>
                     </div>
                 </div>
+                
                 <div class="death-actions-modern">
                     <button class="modern-btn action-revive" id="ad-revive-btn">
-                        <span>▶</span> REVIVE
+                        <span class="btn-icon">▶</span> <span class="btn-text">REVIVE</span>
+                        <div class="btn-glow"></div>
                     </button>
                     <button class="modern-btn action-retry" id="retry-button">
-                        <span>↺</span> RESTART
+                        <span class="btn-icon">↺</span> <span class="btn-text">RESTART</span>
+                    </button>
+                    <button class="modern-btn action-home" id="home-button">
+                        <span class="btn-icon">🏠</span>
                     </button>
                 </div>
             </div>

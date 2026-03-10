@@ -164,6 +164,11 @@ class Game {
             this.startGame(this.difficulty);
         };
 
+        const homeBtn = document.getElementById('home-button');
+        if (homeBtn) {
+            homeBtn.onclick = () => this.showMainMenu();
+        }
+
         document.querySelectorAll('.menu-btn').forEach(btn => {
             btn.onclick = () => this.startGame(btn.dataset.difficulty);
         });
@@ -303,6 +308,13 @@ class Game {
     }
 
     showMenu() { this.hud.showMenu(); }
+    showMainMenu() {
+        this.gameState = 'MENU';
+        this.isGameOver = true;
+        document.getElementById('death-screen').classList.add('hidden');
+        document.getElementById('difficulty-screen').classList.remove('hidden');
+        this.hud.updateHUD();
+    }
     updateHUD() { this.hud.updateHUD(); }
     renderSkins() { this.hud.renderSkins(); }
     renderPass() { this.hud.renderPass(); }
@@ -805,8 +817,8 @@ class Game {
 
         const btn = document.getElementById('ad-revive-btn');
         if (this.revivesLeft > 0) {
-            btn.style.display = 'block';
-            btn.innerText = `WATCH AD TO REVIVE (${this.revivesLeft} LEFT)`;
+            btn.style.display = 'flex';
+            btn.innerHTML = `<span class="btn-icon">▶</span> <span class="btn-text">REVIVE (${this.revivesLeft})</span><div class="btn-glow"></div>`;
         } else {
             btn.style.display = 'none';
         }
