@@ -664,40 +664,8 @@ class Game {
         }
 
         if ((this.keys['PowerDash'] || this.keys['KeyE'] || this.keys['ShiftLeft']) && this.dashCooldown <= 0) {
-            Body.setVelocity(this.player, { x: targetVx, y: -40 });
+            this.modeStrategy.handleDash(this, targetVx);
             this.keys['PowerDash'] = false; this.keys['KeyE'] = false; this.keys['ShiftLeft'] = false;
-            this.isDashingFrames = 25; // Invincible Dash time
-            this.dashCooldown = 250;
-            this.shake = 15; // JUICE: Screen shake on power dash
-            this.createExplosion(this.player.position, '#00ff88', 25);
-            this.playJump();
-
-            // Erase visible red hazards & enemies instantly
-            const scale = this.canvas.width / CONFIG.canvasWidth;
-            const viewTop = -this.cameraY - (this.canvas.height / scale) * 0.2;
-            const viewBottom = -this.cameraY + (this.canvas.height / scale) * 1.5;
-
-            for (let i = this.enemies.length - 1; i >= 0; i--) {
-                const e = this.enemies[i];
-                if (e.position.y > viewTop && e.position.y < viewBottom) {
-                    World.remove(this.world, e);
-                    this.pool.enemy.push(e);
-                    this.createExplosion(e.position, '#ff2200', 30);
-                    this.addXP(30);
-                    this.enemies.splice(i, 1);
-                }
-            }
-            for (let i = this.platforms.length - 1; i >= 0; i--) {
-                const p = this.platforms[i];
-                if (p.label === 'hazard' && p.position.y > viewTop && p.position.y < viewBottom) {
-                    World.remove(this.world, p);
-                    if (p.label === 'pillar') this.pool.pillar.push(p);
-                    else this.pool.platform.push(p);
-                    this.createExplosion(p.position, '#ff2200', 30);
-                    this.addXP(30);
-                    this.platforms.splice(i, 1);
-                }
-            }
         }
 
         if (targetVx !== 0) Body.setVelocity(this.player, { x: targetVx, y: vel.y });
@@ -710,13 +678,9 @@ class Game {
         }
         this.wasFallingLastFrame = !onGround && vel.y > 0;
 
-        if ((this.keys['TouchJump'] || this.keys['Space'] || this.keys['ArrowUp']) && onGround && !this.jumpDebounce) {
-            Body.setVelocity(this.player, { x: this.player.velocity.x, y: jumpForce });
-            this.keys['TouchJump'] = false; this.keys['Space'] = false;
-            this.createExplosion({ x: this.player.position.x, y: this.player.position.y + 16 }, '#ffffff', 10);
-            this.playJump();
-            this.jumpDebounce = true;
-            setTimeout(() => this.jumpDebounce = false, 200);
+        if ((this.keys['TouchJump'] || this.keys['Space'] || this.keys['ArrowUp'])) {
+            this.modeStrategy.handleJump(this, onGround, jumpForce);
+            this.keys['TouchJump'] = false; this.keys['Space'] = false; this.keys['ArrowUp'] = false;
         }
     }
 

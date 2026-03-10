@@ -131,9 +131,46 @@ export class Renderer {
                 this.roundRect(ctx, p.bounds.min.x, p.bounds.min.y, w, h, 8);
                 ctx.fill();
                 ctx.stroke();
-            } else if (p.label === 'hazard') {
-                ctx.fillStyle = '#ff2200';
-                ctx.fillRect(p.bounds.min.x, p.position.y - 6, p.bounds.max.x - p.bounds.min.x, 15);
+            } else if (p.label === 'hazard' || p.label === 'oscillator') {
+                if (this.game.modeStrategy.name === 'fall') {
+                    // Iron metallic style
+                    const w = p.bounds.max.x - p.bounds.min.x;
+                    const h = 15;
+                    const grad = ctx.createLinearGradient(0, p.position.y - 6, 0, p.position.y + 9);
+                    grad.addColorStop(0, '#555');
+                    grad.addColorStop(0.5, '#aaa');
+                    grad.addColorStop(1, '#333');
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(p.bounds.min.x, p.position.y - 6, w, h);
+                    
+                    if (p.label === 'hazard') {
+                        // Draw mini spikes on the top/bottom
+                        ctx.fillStyle = '#222';
+                        const sSize = 10;
+                        for (let sx = p.bounds.min.x; sx < p.bounds.max.x; sx += sSize) {
+                            ctx.beginPath();
+                            ctx.moveTo(sx, p.position.y - 6);
+                            ctx.lineTo(sx + sSize/2, p.position.y - 12);
+                            ctx.lineTo(sx + sSize, p.position.y - 6);
+                            ctx.fill();
+                            
+                            ctx.beginPath();
+                            ctx.moveTo(sx, p.position.y + 9);
+                            ctx.lineTo(sx + sSize/2, p.position.y + 15);
+                            ctx.lineTo(sx + sSize, p.position.y + 9);
+                            ctx.fill();
+                        }
+                    } else {
+                        // Oscillator look (rivets)
+                        ctx.fillStyle = '#111';
+                        for (let rx = p.bounds.min.x + 10; rx < p.bounds.max.x; rx += 40) {
+                            ctx.beginPath(); ctx.arc(rx, p.position.y, 3, 0, Math.PI*2); ctx.fill();
+                        }
+                    }
+                } else {
+                    ctx.fillStyle = p.label === 'hazard' ? '#ff2200' : '#ffff00';
+                    ctx.fillRect(p.bounds.min.x, p.position.y - 6, p.bounds.max.x - p.bounds.min.x, 15);
+                }
             } else if (p.label === 'glass') {
                 ctx.fillStyle = 'rgba(150, 220, 255, 0.5)';
                 ctx.strokeStyle = '#ffffff';
@@ -233,12 +270,34 @@ export class Renderer {
                 ctx.lineTo(x, waveY);
             }
         } else {
-            const spikeWidth = 30;
-            const spikeHeight = 70;
+            // High quality iron spikes
+            const spikeWidth = 40;
+            const spikeHeight = 60;
+            const grad = ctx.createLinearGradient(0, drawLavaPos, 0, drawLavaPos + 150);
+            grad.addColorStop(0, '#111');
+            grad.addColorStop(0.1, '#555');
+            grad.addColorStop(0.5, '#222');
+            ctx.fillStyle = grad;
+            
             for (let x = -100; x <= CONFIG.canvasWidth + 200; x += spikeWidth) {
-                const vx = Math.sin(timeInS * 10 + x) * 2;
-                ctx.lineTo(x + spikeWidth / 2 + vx, drawLavaPos + spikeHeight + Math.cos(timeInS * 15 + x) * 5);
-                ctx.lineTo(x + spikeWidth, drawLavaPos);
+                const vx = Math.sin(timeInS * 8 + x) * 3;
+                ctx.beginPath();
+                ctx.moveTo(x + vx, drawLavaPos);
+                ctx.lineTo(x + spikeWidth / 2 + vx, drawLavaPos + spikeHeight + Math.cos(timeInS * 10 + x) * 8);
+                ctx.lineTo(x + spikeWidth + vx, drawLavaPos);
+                ctx.lineTo(x + spikeWidth + vx, drawLavaPos - 500); // Fill up
+                ctx.lineTo(x + vx, drawLavaPos - 500); 
+                ctx.closePath();
+                ctx.fill();
+                
+                // Highlight edge
+                ctx.strokeStyle = '#888';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(x + vx, drawLavaPos);
+                ctx.lineTo(x + spikeWidth / 2 + vx, drawLavaPos + spikeHeight + Math.cos(timeInS * 10 + x) * 8);
+                ctx.lineTo(x + spikeWidth + vx, drawLavaPos);
+                ctx.stroke();
             }
         }
 

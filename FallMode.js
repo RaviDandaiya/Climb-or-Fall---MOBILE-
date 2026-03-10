@@ -37,20 +37,25 @@ export class FallMode {
         const depth = game.currentHeight || 0;
         const r = Math.random();
         
-        // Initial platforms should be standard or slalom to ensure stability
-        let pType = index < 5 ? 'slalom' : 'unknown';
+        // Even early game should have some variety
+        let pType = 'unknown';
+        if (index < 3) pType = 'slalom'; // Absolute start
         
         if (pType === 'unknown') {
             if (depth > 200) {
-                if (r < 0.1) pType = 'glass';
-                else if (r < 0.25) pType = 'crusher';
+                if (r < 0.15) pType = 'glass';
+                else if (r < 0.35) pType = 'crusher';
+                else if (r < 0.45) pType = 'oscillator';
                 else pType = 'slalom';
             } else if (depth > 50) {
                 if (r < 0.1) pType = 'glass';
-                else if (r < 0.2) pType = 'crusher';
+                else if (r < 0.25) pType = 'crusher';
+                else if (r < 0.35) pType = 'oscillator';
                 else pType = 'slalom';
             } else {
-                pType = 'slalom';
+                // Low depth variety
+                if (r < 0.2) pType = 'oscillator';
+                else pType = 'slalom';
             }
         }
         
@@ -93,9 +98,12 @@ export class FallMode {
         } else if (pType === 'glass') {
             width = 120 + Math.random() * 80;
             x = Math.random() * (CONFIG.canvasWidth - width - 60) + width / 2 + 30;
+        } else if (pType === 'oscillator') {
+            width = 160 + Math.random() * 100;
+            x = CONFIG.canvasWidth / 2;
         }
 
-        const label = pType === 'glass' ? 'glass' : (isHazard ? 'hazard' : 'platform');
+        const label = pType === 'glass' ? 'glass' : (pType === 'oscillator' ? 'oscillator' : (isHazard ? 'hazard' : 'platform'));
         
         let platform = game.pool.platform.pop();
         if (platform) {
@@ -113,11 +121,16 @@ export class FallMode {
         
         platform.isCrumbling = isCrumbling;
         platform.crumbleTimer = 0;
-        platform.isMoving = false;
+        platform.isMoving = (pType === 'oscillator');
+        if (platform.isMoving) {
+            platform.moveSpeed = 2 + Math.random() * 2;
+            platform.minX = width/2 + 20;
+            platform.maxX = CONFIG.canvasWidth - width/2 - 20;
+        }
         
         game.platforms.push(platform);
 
-        if (!isHazard && !isCrumbling && pType !== 'glass') {
+        if (!isHazard && !isCrumbling && pType !== 'glass' && pType !== 'oscillator') {
             const objR = Math.random();
             if (objR < 0.1) game.addCoin(x, y - 35);
             else if (objR < 0.20) game.addPowerup(x, y - 40);
@@ -127,7 +140,8 @@ export class FallMode {
     }
 
     updateLava(mult) {
-        this.game.lavaHeight += this.game.lavaSpeed * (mult * 1.5);
+        // Reduced speed as requested
+        this.game.lavaHeight += this.game.lavaSpeed * (mult * 0.7);
         if (this.game.player.position.y < this.game.lavaHeight) {
             this.game.triggerDeath("IMPALED BY SPIKES");
         }
@@ -198,6 +212,9 @@ export class FallMode {
                  }
              }
 
+             // Handle Oscillator logic (already pushed to game.platforms)
+             // main.js handles p.isMoving generically, but we could customize here if needed
+
              // Near-Miss Bonus System
              if (!p.hasTriggeredNearMiss && !game.isGameOver) {
                  const pWidth = (p.bounds.max.x - p.bounds.min.x);
@@ -216,6 +233,11 @@ export class FallMode {
                  }
              }
         });
+
+        // Fast Fall Phase Out
+        if (this.isFastFalling && game.player.velocity.y < 10) {
+            this.isFastFalling = false;
+        }
         
         // Handle Anchor (smash standard platforms)
         if (game.anchorTimer > 0) {
@@ -241,6 +263,31 @@ export class FallMode {
                     }
                 }
             }
+        }
+    }
+
+    handleJump(game) {
+        // Fast Fall / Slam ability
+        if (!game.player || game.isGameOver) return;
+        this.isFastFalling = true;
+        Body.setVelocity(game.player, { x: game.player.velocity.x, y: 30 });
+        game.createExplosion(game.player.position, '#ffffff', 10);
+        game._playTone(150, 'sine', 0, 0.2); // Low slam sound
+    }
+
+    handleDash(game) {
+        // Phase / Blink ability
+        if (!game.player || game.isGameOver || game.dashCooldown > 0) return;
+        
+        const dashDist = 200;
+        const dir = game.keys['ArrowLeft'] || game.keys['KeyA'] ? -1 : (game.keys['ArrowRight'] || game.keys['KeyD'] ? 1 : 0);
+        
+        if (dir !== 0) {
+            game.createExplosion(game.player.position, '#00ff88', 15);
+            Body.translate(game.player, { x: dir * dashDist, y: 0 });
+            game.createExplosion(game.player.position, '#00ff88', 15);
+            game.dashCooldown = 60; // 1 second
+            game._playTone(600, 'sine', 0, 0.1);
         }
     }
 }
