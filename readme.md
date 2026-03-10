@@ -1,330 +1,275 @@
-# Fall Mode Gameplay Redesign Specification
+# Fall Mode Difficulty Ramp – AI Implementation Prompt
 
 ## Objective
 
-Update **Fall Mode** so that the player is in **continuous free fall** through a vertical cavern while avoiding procedurally generated obstacles and collecting coins.
+Redesign **Fall Mode** so that the gameplay begins with **very easy obstacles** and gradually increases in difficulty as the player survives longer or falls deeper.
 
-The existing **platform-based gameplay must be removed**.
+The goal is to create a **smooth onboarding experience** where new players learn the controls without feeling overwhelmed, while experienced players eventually face intense survival challenges.
 
-Instead, the player falls continuously and must **steer left and right to avoid hazards**.
-
-This creates a **reaction-based survival gameplay loop**.
-
-The system must integrate with the existing architecture without affecting **Climb Mode**.
+Difficulty must increase **progressively and predictably**, not randomly.
 
 ---
 
-# Core Gameplay Loop
+# Core Design Principle
 
-The player:
+The first seconds of gameplay must **teach the player how to control the character**.
 
-1. Falls continuously downward
-2. Uses tilt or buttons to steer horizontally
-3. Avoids obstacles
-4. Collects coins
-5. Survives as long as possible
+To achieve this:
 
-Game ends when:
+* Start with **small obstacles and wide open spaces**
+* Gradually introduce **larger hazards**
+* Later introduce **complex obstacle structures**
 
-```id="a7x2y1"
-player collides with obstacle
+This prevents players from being scared or frustrated at the start and increases player retention.
+
+---
+
+# Difficulty Scaling System
+
+Difficulty should be controlled using a **stage-based progression system**.
+
+Difficulty stages must be calculated based on:
+
 ```
-
-Score increases based on:
-
-* survival time
-* distance fallen
-* coins collected
-
----
-
-# World Movement System
-
-Instead of moving the player downward, the world scrolls upward.
-
-```javascript id="p2w5r9"
-obstacle.y -= worldVelocity
-coin.y -= worldVelocity
+time survived
+or
+distance fallen
 ```
-
-Player vertical position remains mostly fixed on screen.
-
----
-
-# Player Physics
-
-The player experiences **constant downward acceleration**.
 
 Example:
 
-```javascript id="c8d6y4"
-player.velocity.y += gravity
+```
+difficultyLevel = floor(timeSurvived / 20)
 ```
 
-Clamp maximum fall speed:
+or
 
-```javascript id="t4g9q1"
-player.velocity.y = Math.min(player.velocity.y, maxFallSpeed)
+```
+difficultyLevel = floor(depth / 100)
 ```
 
-Example values:
+The difficulty level will determine:
 
-```id="u6n3k2"
-gravity = 0.6
-maxFallSpeed = 20
-```
-
-Horizontal movement remains controlled by tilt or buttons.
+* obstacle size
+* obstacle spawn rate
+* obstacle complexity
+* world velocity
 
 ---
 
-# Controls
+# Stage 1 – Beginner (0–15 seconds)
 
-## Tilt Control
+Purpose: **Teach player movement and controls**
 
-Uses:
+Spawn only **small, simple obstacles**.
 
-```id="z8m1v3"
-DeviceOrientationEvent.gamma
+Obstacle examples:
+
+* small rocks
+* small monsters
+* single hazards
+
+Characteristics:
+
+* large empty spaces
+* slow world speed
+* low spawn rate
+* no complex patterns
+
+Players should have plenty of time to react.
+
+Example pattern:
+
 ```
+     O
 
-Logic:
-
-```javascript id="x5p7b4"
-if (Math.abs(gamma) > deadZone) {
-player.velocity.x += gamma * sensitivity
-}
-```
-
-Dead zone:
-
-```id="f3r2n1"
-2 degrees
-```
-
----
-
-## Button Controls
-
-Two overlay buttons:
-
-```id="b6q4k9"
-LEFT
-RIGHT
-```
-
-When pressed:
-
-```javascript id="m9e2c8"
-player.velocity.x += acceleration
-```
-
-Velocity cap:
-
-```id="h5t7s1"
-player.maxSpeed
+        O
+   O
 ```
 
 ---
 
-# Obstacle System
+# Stage 2 – Early Challenge (15–40 seconds)
 
-Platforms are removed completely.
-
-Instead, the game generates **falling corridor obstacles**.
+Purpose: **Introduce basic navigation challenges**
 
 Obstacle types:
 
-### 1 Wall Segments
+* medium rocks
+* moving creatures
+* small obstacle clusters
 
-Vertical rock formations that block parts of the cavern.
+Characteristics:
 
-Example:
+* slightly increased world speed
+* moderate spawn frequency
+* simple gap patterns
+
+Example pattern:
 
 ```
-|   gap   |
-|#### ####|
+   O     O
+
+       O
+  O
 ```
 
-Player must steer through the gap.
+Players begin needing quick reactions.
 
 ---
 
-### 2 Moving Crushers
+# Stage 3 – Intermediate (40–80 seconds)
 
-Two horizontal blocks move toward each other.
+Purpose: **Increase tension and reaction difficulty**
 
-If the player remains inside the gap too long they are crushed.
+Obstacle types:
 
-Movement example:
+* larger hazards
+* rotating blades
+* small crusher traps
 
-```javascript id="j3y9v2"
-leftBlock.x += crusherSpeed
-rightBlock.x -= crusherSpeed
+Characteristics:
+
+* tighter gaps
+* faster world velocity
+* multiple obstacles appearing simultaneously
+
+Example pattern:
+
+```
+ O  O  O
+
+     gap
+ O       O
 ```
 
-Crusher speed increases with difficulty.
+Players must navigate precisely.
 
 ---
 
-### 3 Rotating Blades
+# Stage 4 – Advanced (80+ seconds)
 
-Circular rotating hazards placed in the fall path.
+Purpose: **High-intensity survival gameplay**
 
-Behavior:
+Obstacle types:
 
-```javascript id="g7c2w5"
-blade.rotation += rotationSpeed
+* large platform-sized obstacles
+* horizontal crushers
+* rotating traps
+* obstacle walls
+
+Characteristics:
+
+* narrow gaps
+* fast obstacle movement
+* dense hazard clusters
+
+Example pattern:
+
+```
+████    ████
+   gap
+
+  █████████
 ```
 
-Collision results in instant game over.
+This stage should feel intense and require skill.
 
 ---
 
-### 4 Laser Gates
+# Progressive Obstacle Introduction
 
-Horizontal laser beams that activate periodically.
+Obstacle types must unlock gradually.
 
-Logic example:
+Example progression:
 
-```javascript id="n8u5p3"
-laser.active = time % 3 === 0
-```
+Stage 1
 
-Players must time their fall.
+* small rocks
 
----
+Stage 2
 
-# Procedural Generation
+* medium hazards
+* monsters
 
-Obstacles spawn at the bottom of the screen.
+Stage 3
 
-```javascript id="d4s8v1"
-spawnY = canvas.height + spawnBuffer
-```
+* rotating blades
+* crusher traps
 
-Random gap placement:
+Stage 4
 
-```javascript id="k9p6r3"
-gapX = random(minX, maxX)
-```
+* large platform obstacles
+* complex obstacle walls
 
-Gap width must always be greater than:
-
-```id="y2m5f4"
-player.width * 2
-```
-
-This ensures every obstacle is technically passable.
+This creates the feeling that the player is **falling deeper into a more dangerous cavern**.
 
 ---
 
-# Object Pooling
+# Spawn System
 
-All obstacles must use object pooling.
+Obstacle spawning should use a **difficulty-based spawn table** instead of pure randomness.
 
-Recycle objects when they leave the screen.
+Example logic:
 
-```javascript id="w3e6q8"
-if (obstacle.y < -obstacle.height)
-recycleObstacle()
+```
+if difficultyLevel == 0
+spawnSmallObstacle()
+
+if difficultyLevel == 1
+spawnMediumObstacle()
+
+if difficultyLevel >= 2
+spawnLargeObstacle()
 ```
 
-This prevents garbage collection spikes.
+Spawn rate should increase gradually as well.
 
 ---
 
-# Coin System
+# Difficulty Scaling Parameters
 
-Coins spawn randomly inside safe gaps.
+The difficulty system must control the following values:
 
-Collecting a coin grants:
+World speed:
 
-```id="s6t3v5"
-+50 points
+```
+worldVelocity = baseSpeed + difficultyLevel * speedIncrease
 ```
 
-Coin behavior:
+Spawn rate:
 
-```javascript id="c2n7u9"
-coin.y -= worldVelocity
+```
+spawnInterval = max(minSpawnTime, baseSpawnTime - difficultyLevel * reductionRate)
 ```
 
-Optional magnet power-up can attract nearby coins.
+Obstacle size:
+
+```
+obstacleScale = baseSize + difficultyLevel * sizeIncrease
+```
+
+All values must be clamped to prevent impossible gameplay.
 
 ---
 
-# Scoring System
+# Player Experience Goals
 
-Score is based on distance fallen.
+The player experience should feel like:
 
-Formula:
-
-```id="e1v8r6"
-score = floor(distanceFallen / 10)
+```
+calm start
+↓
+learning controls
+↓
+reacting to obstacles
+↓
+precision navigation
+↓
+high-speed survival
 ```
 
-Additional score sources:
-
-```id="b7u4m2"
-coin collection
-near miss bonuses
-```
-
----
-
-# Difficulty Scaling
-
-Difficulty increases as the player survives longer.
-
-World velocity increases gradually.
-
-Formula:
-
-```id="z9k1n4"
-Vy = Vstart + (BaseAcceleration * time)
-```
-
-Example values:
-
-```id="p5x7g3"
-Vstart = 3
-BaseAcceleration = 0.03
-maxVelocity = 12
-```
-
-Velocity must be clamped to maintain fairness.
-
----
-
-# Collision System
-
-Use **AABB collision detection**.
-
-Check collisions between:
-
-```id="r8m2j5"
-player vs obstacles
-player vs coins
-```
-
-Player hitbox should be slightly smaller than sprite.
-
-```javascript id="t6y3q1"
-hitbox = spriteSize * 0.9
-```
-
----
-
-# Game States
-
-Fall Mode must support:
-
-```id="k4f9w2"
-START
-PLAYING
-GAMEOVER
-```
+The difficulty curve must feel **fair and rewarding**.
 
 ---
 
@@ -332,20 +277,14 @@ GAMEOVER
 
 Maintain:
 
-```id="v7b2n6"
-60 FPS on mobile
+* stable 60 FPS
+* object pooling for obstacles
+* no new object creation inside the game loop
+* capped particle effects
+
+Example:
+
 ```
-
-Rules:
-
-* no object creation inside the game loop
-* use object pooling
-* single canvas renderer
-* particle effects must be capped
-
-Example particle limit:
-
-```id="a2r8c4"
 MAX_PARTICLES = 150
 ```
 
@@ -353,29 +292,26 @@ MAX_PARTICLES = 150
 
 # Integration Rules
 
-The changes must affect only:
+The difficulty ramp must be implemented inside:
 
-```id="u9p5s3"
+```
 FallMode.js
 ```
 
 Do not modify:
 
-```id="j6c2q8"
+```
 ClimbMode.js
 core renderer
 input handler
 ```
 
-Fall Mode must remain compatible with the existing game engine.
-
 ---
 
-# Goal
+# Final Goal
 
-The redesigned Fall Mode should feel like:
+The Fall Mode gameplay should feel like a **journey into an increasingly dangerous cavern**, where:
 
-* a **high-speed obstacle navigation game**
-* similar to falling through a dangerous cavern
-* focused on **reaction time and precision steering**
-* optimized for **mobile tilt gameplay**
+* early gameplay is relaxing and approachable
+* mid-game becomes reactive and challenging
+* late-game becomes intense survival
