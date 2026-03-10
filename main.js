@@ -112,11 +112,30 @@ class Game {
                 const delta = Math.min(time - this.lastTime, 50);
                 this.lastTime = time;
 
-                if (!this.isGameOver && this.player) {
+                if (this.freezeEnd && time < this.freezeEnd) {
+                    if (this.shake > 0) this.shake *= 0.9;
+                    this.renderWorldManual();
+                    requestAnimationFrame(tick);
+                    return;
+                }
+
+                if (this.gameState === 'PLAYING' && this.player) {
                     // Update Physics at a fixed timestep for consistency across devices
                     Engine.update(this.engine, 16.666);
                     this.update();
                     this.createCuteTrail();
+                } else if (this.gameState === 'DEATH_ANIMATION' && this.player) {
+                    Engine.update(this.engine, 16.666);
+                    Body.setAngle(this.player, this.player.angle + 0.35); // 20 deg spin
+                    Body.setVelocity(this.player, { x: this.player.velocity.x, y: this.player.velocity.y + this.world.gravity.y * 0.1 }); // extra gravity
+                    if (this.shake > 0) this.shake *= 0.9;
+
+                    if (time - this.deathTimerAnim > 1800) {
+                        this.showGameOverUI();
+                    }
+                } else if (!this.isGameOver && this.player && !this.gameState) {
+                    Engine.update(this.engine, 16.666);
+                    this.update();
                 }
 
                 this.renderWorldManual();
@@ -140,6 +159,8 @@ class Game {
     setupEventListeners() {
         document.getElementById('retry-button').onclick = () => {
             document.getElementById('death-screen').classList.add('hidden');
+            document.getElementById('retry-button').style.transform = '';
+            document.getElementById('death-screen').style.opacity = '1';
             this.startGame(this.difficulty);
         };
 
@@ -293,6 +314,7 @@ class Game {
         this.lavaSpeed = settings.lavaSpeed;
         this.lavaHeight = this.modeStrategy.getLavaStartHeight();
         this.isGameOver = false;
+        this.gameState = 'PLAYING';
         this.revivesLeft = 2; // Limit to 2 revives per game
         document.getElementById('difficulty-screen').classList.add('hidden');
         window.focus();
@@ -736,12 +758,30 @@ class Game {
     }
 
     triggerDeath(reason) {
-        if (this.isGameOver) return;
-        this.isGameOver = true; this.shake = 30;
-        document.getElementById('fall-distance').innerText = this.maxHeight;
+        if (this.gameState === 'DEATH_ANIMATION' || this.gameState === 'GAME_OVER') return;
+        this.gameState = 'DEATH_ANIMATION';
+        this.isGameOver = true;
+        this.shake = 25;
         
+        this.deathReasonString = reason || "Skill issue? Try again.";
+        this.deathTimerAnim = performance.now();
+        this.freezeEnd = performance.now() + 150;
+        
+        if (this.player) {
+            this.player.collisionFilter = { group: -1, category: 0, mask: 0 };
+            Body.setVelocity(this.player, { x: (Math.random() - 0.5) * 10, y: -15 });
+            this.createExplosion(this.player.position, '#ffffff', 20); // Bright flash
+            this.createExplosion(this.player.position, '#ff2200', 30); // Fire / Debris
+        }
+    }
+
+    showGameOverUI() {
+        if (this.gameState === 'GAME_OVER') return;
+        this.gameState = 'GAME_OVER';
+
+        document.getElementById('fall-distance').innerText = this.maxHeight;
         const reasonEl = document.getElementById('death-reason');
-        if (reasonEl) reasonEl.innerText = reason || "Skill issue? Try again.";
+        if (reasonEl) reasonEl.innerText = this.deathReasonString;
 
         if (this.maxHeight > this.bestHeight) {
             this.bestHeight = this.maxHeight; localStorage.setItem('bestHeight', this.bestHeight);
@@ -750,7 +790,18 @@ class Game {
         const bestDeathEl = document.getElementById('best-distance-death');
         if (bestDeathEl) bestDeathEl.innerText = this.bestHeight;
 
-        document.getElementById('death-screen').classList.remove('hidden');
+        const ds = document.getElementById('death-screen');
+        ds.classList.remove('hidden');
+        ds.style.opacity = '0';
+        ds.style.transition = 'opacity 0.5s ease-in-out';
+        setTimeout(() => ds.style.opacity = '1', 50);
+
+        const rb = document.getElementById('retry-button');
+        if (rb) {
+            rb.style.transform = 'scale(0.8)';
+            rb.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            setTimeout(() => rb.style.transform = 'scale(1)', 550);
+        }
 
         const btn = document.getElementById('ad-revive-btn');
         if (this.revivesLeft > 0) {

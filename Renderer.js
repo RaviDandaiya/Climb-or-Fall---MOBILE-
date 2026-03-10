@@ -476,5 +476,18 @@ export class Renderer {
             ctx.translate(0, this.game.cameraY);
         });
         ctx.restore();
+
+        // 11. Death Animation Slow Fade Background
+        if (this.game.gameState === 'DEATH_ANIMATION' || this.game.gameState === 'GAME_OVER') {
+            let overlayOpacity = 0.5;
+            if (this.game.gameState === 'DEATH_ANIMATION' && this.game.deathTimerAnim) {
+                 const timeSinceDeath = performance.now() - this.game.deathTimerAnim;
+                 overlayOpacity = Math.min(0.5, (timeSinceDeath / 1000) * 0.5);
+            }
+            if (overlayOpacity > 0) {
+                 ctx.fillStyle = `rgba(0, 0, 0, ${overlayOpacity})`;
+                 ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+        }
     }
 }
