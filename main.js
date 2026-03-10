@@ -1,38 +1,15 @@
 import Matter from 'matter-js';
 import { Capacitor } from '@capacitor/core';
 import { UnityAds } from 'capacitor-unity-ads';
+import { CONFIG, THEMES, DIFFICULTY_SETTINGS, SKINS } from './constants.js';
+import { AudioManager } from './Audio.js';
+import { ParticleSystem } from './Particles.js';
+import { HUDManager } from './HUD.js';
+import { Renderer } from './Renderer.js';
+import { ClimbMode } from './ClimbMode.js';
+import { FallMode } from './FallMode.js';
 
 const { Engine, Render, Runner, Bodies, Composite, World, Events, Body, Sleeping } = Matter;
-
-const CONFIG = {
-    canvasWidth: 600,
-    canvasHeight: 900,
-    playerRadius: 18,
-    moveSpeed: 7.5,
-    jumpForce: -20.0,
-    platformHeight: 12
-};
-
-const THEMES = [
-    { name: 'Void', bg: ['#0f0c29', '#302b63'], accent: '#9d00ff' },
-    { name: 'Fire', bg: ['#1e130c', '#9a0606'], accent: '#ff4b2b' },
-    { name: 'Neon', bg: ['#000000', '#434343'], accent: '#00ff88' },
-    { name: 'Ocean', bg: ['#114357', '#f29492'], accent: '#2ebf91' }
-];
-
-const DIFFICULTY_SETTINGS = {
-    easy: { lavaSpeed: 0.4, gapHeight: 100, platformWidth: 160, hazardChance: 0.05, pillarChance: 0.02 },
-    medium: { lavaSpeed: 0.65, gapHeight: 125, platformWidth: 130, hazardChance: 0.12, pillarChance: 0.05 },
-    hard: { lavaSpeed: 0.9, gapHeight: 145, platformWidth: 100, hazardChance: 0.22, pillarChance: 0.1 }
-};
-
-const SKINS = [
-    { id: 'default', name: 'GLOW', color: '#9d00ff', price: 0 },
-    { id: 'neon', name: 'CYBER', color: '#00ff88', price: 200 },
-    { id: 'ninja', name: 'NIGHT', color: '#ffcc00', price: 500 },
-    { id: 'alien', name: 'XENO', color: '#ff00ff', price: 1000 },
-    { id: 'xmas', name: 'SANTA', color: '#ff0044', price: 1500 }
-];
 
 let LOOP_ACTIVE = false;
 
@@ -61,6 +38,8 @@ class Game {
         this.cameraY = 0;
         this.maxHeight = 0;
         this.currentHeight = 0;
+        this.scoreBonus = 0;
+        this.score = 0;
         this.bestHeight = parseInt(localStorage.getItem('bestHeight')) || 0;
         this.combo = 1;
         this.stage = 0;
@@ -77,8 +56,7 @@ class Game {
         this.revivesLeft = Infinity;
         this.playerName = localStorage.getItem('playerName') || 'Survivor';
         this.isGameOver = true;
-        this.particles = [];
-        this.particlePool = [];
+        this.particleSystem = new ParticleSystem();
         this.shake = 0;
         this.difficulty = 'medium';
         this.lavaSpeed = 0.6;
@@ -86,6 +64,7 @@ class Game {
         this.isClimbing = false;
         this.controlMode = localStorage.getItem('controlMode') || 'touch';
         this.gameMode = 'climb';
+        this.modeStrategy = new ClimbMode(this);
         
         this.hasShield = false;
         this.magnetTimer = 0;
@@ -97,6 +76,11 @@ class Game {
             size: Math.random() * 1.5 + 0.5,
             opacity: Math.random() * 0.7 + 0.3
         }));
+        this.activeCoins = [];
+        this.pool = { platform: [], pillar: [], coin: [], powerup: [], enemy: [] };
+
+        this.hud = new HUDManager(this);
+        this.enemies = [];
 
         this.init();
     }
@@ -140,22 +124,10 @@ class Game {
             };
             requestAnimationFrame(tick);
 
-            this.enemies = [];
-            this.initAds();
-
-            this.platformCanvas = document.createElement('canvas');
-            this.platformCanvas.width = 300;
-            this.platformCanvas.height = 30;
-            this.drawCachedPlatform();
-
+            this.renderer = new Renderer(this);
+            
             try {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                if (AudioContext) {
-                    this.audio = new AudioContext();
-                    this.masterGain = this.audio.createGain();
-                    this.masterGain.gain.value = 0.12;
-                    this.masterGain.connect(this.audio.destination);
-                }
+                this.audioManager = new AudioManager();
             } catch (err) { console.warn('audio init fail', err); }
 
             this.showMenu();
@@ -277,11 +249,13 @@ class Game {
         if (btnClimb && btnFall) {
             btnClimb.onclick = () => {
                 this.gameMode = 'climb';
+                this.modeStrategy = new ClimbMode(this);
                 btnClimb.classList.add('active');
                 btnFall.classList.remove('active');
             };
             btnFall.onclick = () => {
                 this.gameMode = 'fall';
+                this.modeStrategy = new FallMode(this);
                 btnFall.classList.add('active');
                 btnClimb.classList.remove('active');
             };
@@ -304,22 +278,17 @@ class Game {
         this.canvas.addEventListener('pointerleave', handleTapJumpEnd);
     }
 
-    showMenu() {
-        document.getElementById('difficulty-screen').classList.remove('hidden');
-    }
-
-    updateHUD() {
-        if (document.getElementById('coin-count')) document.getElementById('coin-count').innerText = this.coins;
-        if (document.getElementById('best-value')) document.getElementById('best-value').innerText = this.bestHeight;
-        if (document.getElementById('height-value')) document.getElementById('height-value').innerText = this.currentHeight;
-        if (document.getElementById('pass-level')) document.getElementById('pass-level').innerText = this.passLevel;
-    }
+    showMenu() { this.hud.showMenu(); }
+    updateHUD() { this.hud.updateHUD(); }
+    renderSkins() { this.hud.renderSkins(); }
+    renderPass() { this.hud.renderPass(); }
+    showLevelUpToast(level) { this.hud.showLevelUpToast(level); }
 
     startGame(diff) {
         this.difficulty = diff;
         const settings = DIFFICULTY_SETTINGS[diff];
         this.lavaSpeed = settings.lavaSpeed;
-        this.lavaHeight = this.gameMode === 'climb' ? CONFIG.canvasHeight + 1200 : -1200;
+        this.lavaHeight = this.modeStrategy.getLavaStartHeight();
         this.isGameOver = false;
         this.revivesLeft = 2; // Limit to 2 revives per game
         document.getElementById('difficulty-screen').classList.add('hidden');
@@ -330,10 +299,14 @@ class Game {
         this.cameraY = 0;
         this.maxHeight = 0;
         this.currentHeight = 0;
+        this.scoreBonus = 0;
+        this.score = 0;
+        this.combo = 1;
+        this.updateHUD();
 
         this.platforms = [];
         this.enemies = [];
-        this.particles = [];
+        this.particleSystem.particles = [];
         this.dashCooldown = 0;
         this.isDashingFrames = 0;
         this.createPlayer();
@@ -344,7 +317,7 @@ class Game {
     }
 
     createPlayer() {
-        const startY = this.gameMode === 'climb' ? CONFIG.canvasHeight - 150 : 150;
+        const startY = this.modeStrategy.getPlayerStartY();
         this.player = Bodies.circle(CONFIG.canvasWidth / 2, startY, CONFIG.playerRadius, {
             friction: 0.001,
             restitution: 0.1,
@@ -355,7 +328,7 @@ class Game {
     }
 
     createStartPlatform() {
-        const floorY = this.gameMode === 'climb' ? CONFIG.canvasHeight + 100 : -100;
+        const floorY = this.modeStrategy.getFloorY();
         const floor = Bodies.rectangle(CONFIG.canvasWidth / 2, floorY, CONFIG.canvasWidth * 10, 200, {
             isStatic: true,
             label: 'floor'
@@ -375,41 +348,70 @@ class Game {
 
     generateInitialPlatforms(settings) {
         for (let i = 0; i < 5; i++) {
-            const y = this.gameMode === 'climb' 
-                ? (CONFIG.canvasHeight - 60 - (i * settings.gapHeight))
-                : (60 + (i * settings.gapHeight));
+            const y = this.modeStrategy.getInitialPlatformY(i, settings);
             this.addPlatform(y, i);
         }
     }
 
     addPlatform(y, index) {
-        const settings = DIFFICULTY_SETTINGS[this.difficulty];
-        const isPillar = Math.random() < settings.pillarChance;
         if (this.isGameOver) return;
+        const settings = DIFFICULTY_SETTINGS[this.difficulty];
+        
+        if (this.modeStrategy.createCustomPlatform && this.modeStrategy.createCustomPlatform(y, index, settings, this)) {
+            return;
+        }
+
+        const isPillar = Math.random() < settings.pillarChance;
 
         if (isPillar) {
             const height = 100 + Math.random() * 150; // Taller green pillars
             const x = Math.random() * (CONFIG.canvasWidth - 80) + 40;
-            const pillar = Bodies.rectangle(x, y, 40, height, { isStatic: true, label: 'pillar', render: { visible: false } });
+            let pillar = this.pool.pillar.pop();
+            if (pillar) {
+                const oldHeight = pillar.bounds.max.y - pillar.bounds.min.y;
+                Body.scale(pillar, 1, height / oldHeight);
+                Body.setPosition(pillar, {x, y});
+                Body.setVelocity(pillar, {x:0, y:0});
+                World.add(this.world, pillar);
+            } else {
+                pillar = Bodies.rectangle(x, y, 40, height, { isStatic: true, label: 'pillar', render: { visible: false } });
+                World.add(this.world, pillar);
+            }
+            pillar.isMoving = false;
+
             if (this.maxHeight > 500 && Math.random() < 0.6) {
                 pillar.isMoving = true;
                 pillar.moveSpeed = (Math.random() < 0.5 ? 1 : -1) * (1.5 + Math.random() * 2);
                 pillar.minX = 40; pillar.maxX = CONFIG.canvasWidth - 40;
             }
             this.platforms.push(pillar);
-            World.add(this.world, pillar);
         } else {
-            const width = (settings.platformWidth * 0.7) + (Math.random() * settings.platformWidth * 1.0);
-            const x = (Math.random() * (CONFIG.canvasWidth - width - 60)) + width / 2 + 30;
+            const pParams = this.modeStrategy.getPlatformParams(index, settings);
+            const width = pParams.width;
+            const x = pParams.x;
+
             const isHazard = index > 15 && Math.random() < settings.hazardChance;
             const isCrumbling = !isHazard && index > 10 && Math.random() < 0.15;
-            const platform = Bodies.rectangle(x, y, width, CONFIG.platformHeight, { isStatic: true, label: isHazard ? 'hazard' : 'platform', render: { visible: false } });
-            if (isCrumbling) {
-                platform.isCrumbling = true;
-                platform.crumbleTimer = 0; // Not yet touched
+            const label = isHazard ? 'hazard' : 'platform';
+            
+            let platform = this.pool.platform.pop();
+            if (platform) {
+                const oldWidth = platform.bounds.max.x - platform.bounds.min.x;
+                Body.scale(platform, width / oldWidth, 1);
+                Body.setPosition(platform, {x, y});
+                Body.setVelocity(platform, {x:0, y:0});
+                platform.label = label;
+                World.add(this.world, platform);
+            } else {
+                platform = Bodies.rectangle(x, y, width, CONFIG.platformHeight, { isStatic: true, render: { visible: false } });
+                platform.label = label;
+                World.add(this.world, platform);
             }
+            platform.isCrumbling = isCrumbling;
+            platform.crumbleTimer = 0;
+            platform.isMoving = false;
             this.platforms.push(platform);
-            World.add(this.world, platform);
+
             if (!isHazard && !isCrumbling) {
                 const rng = Math.random();
                 if (rng < 0.1) this.addCoin(x, y - 35);
@@ -419,11 +421,22 @@ class Game {
     }
 
     addPowerup(x, y) {
-        const type = Math.random() < 0.5 ? 'shield' : 'magnet';
-        const p = Bodies.circle(x, y, 16, { isStatic: true, isSensor: true, label: 'powerup' });
+        let type;
+        if (this.modeStrategy.getPowerupType) {
+            type = this.modeStrategy.getPowerupType();
+        } else {
+            type = Math.random() < 0.5 ? 'shield' : 'magnet';
+        }
+        let p = this.pool.powerup.pop();
+        if (p) {
+            Body.setPosition(p, {x, y});
+            World.add(this.world, p);
+        } else {
+            p = Bodies.circle(x, y, 16, { isStatic: true, isSensor: true, label: 'powerup' });
+            World.add(this.world, p);
+        }
         p.powerupType = type;
         this.powerups.push(p);
-        World.add(this.world, p);
     }
 
     collectPowerup(p) {
@@ -433,9 +446,13 @@ class Game {
         } else if (p.powerupType === 'magnet') {
             this.magnetTimer = 600; // ~10 seconds
             this.createExplosion(p.position, '#ff3e3e', 20);
+        } else if (p.powerupType === 'anchor') {
+            this.anchorTimer = 300; // 5 seconds
+            this.createExplosion(p.position, '#444444', 30);
         }
         World.remove(this.world, p);
         this.powerups = this.powerups.filter(item => item !== p);
+        this.pool.powerup.push(p);
         this._playTone(880, 'sine', 0, 0.15);
     }
 
@@ -446,8 +463,15 @@ class Game {
     }
 
     addCoin(x, y) {
-        const coin = Bodies.circle(x, y, 8, { isStatic: true, isSensor: true, label: 'coin' });
-        World.add(this.world, coin);
+        let coin = this.pool.coin.pop();
+        if (coin) {
+            Body.setPosition(coin, {x, y});
+            World.add(this.world, coin);
+        } else {
+            coin = Bodies.circle(x, y, 8, { isStatic: true, isSensor: true, label: 'coin' });
+            World.add(this.world, coin);
+        }
+        this.activeCoins.push(coin);
     }
 
     update() {
@@ -460,6 +484,10 @@ class Game {
         this.checkCollisions();
         this.cullAndGeneratePlatforms();
         
+        if (this.modeStrategy.updateFallMechanics) {
+            this.modeStrategy.updateFallMechanics(this);
+        }
+
         if (this.magnetTimer > 0) {
             this.magnetTimer--;
             Composite.allBodies(this.world).forEach(b => {
@@ -481,15 +509,13 @@ class Game {
         }
 
         if (this.shake > 0) this.shake *= 0.9;
-        const abyssDead = this.gameMode === 'climb' 
-            ? (this.player.position.y > this.lavaHeight + 800)
-            : (this.player.position.y < this.lavaHeight - 800);
+        const abyssDead = this.modeStrategy.getAbyssCondition();
         if (this.player && abyssDead) {
             if (this.hasShield) {
                 this.consumeShield();
-                Body.setVelocity(this.player, { x: 0, y: this.gameMode === 'climb' ? -20 : 20 });
+                Body.setVelocity(this.player, { x: 0, y: this.modeStrategy.getAbyssReviveVelocity() });
             } else {
-                this.triggerDeath(this.gameMode === 'climb' ? "FELL INTO THE ABYSS" : "SOARED TO OBLIVION");
+                this.triggerDeath(this.modeStrategy.getAbyssDeathMessage());
             }
         }
     }
@@ -506,6 +532,7 @@ class Game {
                 if (now - p.crumbleTimer > 1500) {
                     this.createExplosion(p.position, '#ccaa88', 15);
                     World.remove(this.world, p);
+                    this.pool.platform.push(p);
                     this.platforms.splice(i, 1);
                 }
             }
@@ -532,9 +559,45 @@ class Game {
             else if (other.label === 'enemy' || (other.label === 'hazard' && this.player.velocity.y > 0)) {
                 if (this.hasShield) {
                     this.consumeShield();
+                    if (other.label === 'enemy') {
+                        World.remove(this.world, other);
+                        let idx = this.enemies.indexOf(other);
+                        if (idx > -1) this.enemies.splice(idx, 1);
+                        this.pool.enemy.push(other);
+                    }
                 } else {
                     this.triggerDeath(other.label === 'enemy' ? "SLAIN BY A FOE" : "CATASTROPHE");
                 }
+            }
+            else if (other.label === 'crusher') {
+                if (this.hasShield) {
+                    this.consumeShield();
+                    // Knockback to avoid immediate death loop
+                    Body.setVelocity(this.player, { x: 0, y: -20 });
+                } else {
+                    this.triggerDeath("CRUSHED TO DUST");
+                }
+            }
+            else if (other.label === 'platform' || other.label === 'pillar') {
+                // Landing on regular platform resets combo
+                this.combo = 1;
+                this.updateHUD();
+            }
+            else if (other.label === 'enemy' || other.label === 'hazard') {
+                 // Hit hazard/enemy (if shielded) resets combo
+                 this.combo = 1;
+                 this.updateHUD();
+            }
+            else if (other.label === 'glass' && this.player.velocity.y > 0) {
+                // Shatter instantly
+                this.createExplosion(other.position, '#aaddff', 40);
+                this.shake = 25;
+                Body.setVelocity(this.player, { x: this.player.velocity.x, y: 35 });
+                World.remove(this.world, other);
+                const idx = this.platforms.indexOf(other);
+                if (idx > -1) this.platforms.splice(idx, 1);
+                this.pool.platform.push(other);
+                this._playTone(1200, 'square', 0, 0.1);
             }
             else if (other.label === 'platform' && other.isCrumbling && this.player.velocity.y > 0) {
                 if (other.crumbleTimer === 0) other.crumbleTimer = performance.now();
@@ -548,6 +611,9 @@ class Game {
         this.updateHUD();
         this.createParticles(coin.position, '#ffcc00', 8);
         World.remove(this.world, coin);
+        let idx = this.activeCoins.indexOf(coin);
+        if (idx > -1) this.activeCoins.splice(idx, 1);
+        this.pool.coin.push(coin);
         localStorage.setItem('coins', this.coins);
         this.playCoin();
     }
@@ -569,14 +635,7 @@ class Game {
         const maxMult = 3.5;
         const currentMult = 1 + this.maxHeight / 2000;
         const mult = Math.min(currentMult, maxMult);
-        
-        if (this.gameMode === 'climb') {
-            this.lavaHeight -= this.lavaSpeed * mult;
-            if (this.player.position.y > this.lavaHeight) this.triggerDeath("CONSUMED BY LAVA");
-        } else {
-            this.lavaHeight += this.lavaSpeed * mult;
-            if (this.player.position.y < this.lavaHeight) this.triggerDeath("IMPALED BY SPIKES");
-        }
+        this.modeStrategy.updateLava(mult);
     }
 
     handleInput() {
@@ -589,9 +648,11 @@ class Game {
         let targetVx = 0;
         if (this.controlMode === 'tilt' && this.gyroGamma !== 0) {
             if (this.smoothedGamma === undefined) this.smoothedGamma = this.gyroGamma;
-            this.smoothedGamma += (this.gyroGamma - this.smoothedGamma) * 0.15;
+            this.smoothedGamma += (this.gyroGamma - this.smoothedGamma) * 0.2; // faster smoothing
             let tilt = this.smoothedGamma;
-            if (Math.abs(tilt) > 4) targetVx = baseSpeed * Math.sign(tilt) * Math.min(1.2, Math.abs(tilt) / 20);
+            
+            const tiltSettings = this.modeStrategy.getTiltSettings();
+            if (Math.abs(tilt) > 3) targetVx = baseSpeed * Math.sign(tilt) * Math.min(tiltSettings.maxMult, Math.abs(tilt) / tiltSettings.sens);
         }
         if (this.keys['ArrowLeft'] || this.keys['KeyA']) targetVx = -baseSpeed;
         else if (this.keys['ArrowRight'] || this.keys['KeyD']) targetVx = baseSpeed;
@@ -607,6 +668,7 @@ class Game {
             this.keys['PowerDash'] = false; this.keys['KeyE'] = false; this.keys['ShiftLeft'] = false;
             this.isDashingFrames = 25; // Invincible Dash time
             this.dashCooldown = 250;
+            this.shake = 15; // JUICE: Screen shake on power dash
             this.createExplosion(this.player.position, '#00ff88', 25);
             this.playJump();
 
@@ -619,6 +681,7 @@ class Game {
                 const e = this.enemies[i];
                 if (e.position.y > viewTop && e.position.y < viewBottom) {
                     World.remove(this.world, e);
+                    this.pool.enemy.push(e);
                     this.createExplosion(e.position, '#ff2200', 30);
                     this.addXP(30);
                     this.enemies.splice(i, 1);
@@ -628,6 +691,8 @@ class Game {
                 const p = this.platforms[i];
                 if (p.label === 'hazard' && p.position.y > viewTop && p.position.y < viewBottom) {
                     World.remove(this.world, p);
+                    if (p.label === 'pillar') this.pool.pillar.push(p);
+                    else this.pool.platform.push(p);
                     this.createExplosion(p.position, '#ff2200', 30);
                     this.addXP(30);
                     this.platforms.splice(i, 1);
@@ -637,6 +702,13 @@ class Game {
 
         if (targetVx !== 0) Body.setVelocity(this.player, { x: targetVx, y: vel.y });
         else Body.setVelocity(this.player, { x: vel.x * 0.8, y: vel.y });
+
+        // Landing Juice
+        if (onGround && this.wasFallingLastFrame) {
+            this.shake = Math.min(this.shake + 3, 10);
+            this.createExplosion({ x: this.player.position.x, y: this.player.position.y + 16 }, '#ffffff', 8);
+        }
+        this.wasFallingLastFrame = !onGround && vel.y > 0;
 
         if ((this.keys['TouchJump'] || this.keys['Space'] || this.keys['ArrowUp']) && onGround && !this.jumpDebounce) {
             Body.setVelocity(this.player, { x: this.player.velocity.x, y: jumpForce });
@@ -649,15 +721,24 @@ class Game {
     }
 
     updateStats() {
-        const startY = this.gameMode === 'climb' ? CONFIG.canvasHeight - 150 : 150;
+        const startY = this.modeStrategy.getPlayerStartY();
         const h = Math.floor(Math.abs(startY - this.player.position.y) / 10);
         this.currentHeight = Math.max(0, h);
-        if (this.currentHeight > this.maxHeight) {
-            this.maxHeight = this.currentHeight; this.addXP(1);
+        
+        this.score = this.currentHeight + this.scoreBonus;
+
+        if (this.score > this.maxHeight) {
+            this.maxHeight = this.score; 
+            if (this.maxHeight % 10 === 0) this.addXP(1);
+
             const newStage = Math.floor(this.maxHeight / 150);
             if (newStage > this.stage) { this.stage = newStage; this.levelUpTwist(this.stage); }
         }
-        document.getElementById('height-value').innerText = this.currentHeight;
+        document.getElementById('height-value').innerText = this.score;
+    }
+
+    addScoreBonus(amt) {
+        this.scoreBonus += amt;
     }
 
     levelUpTwist(stage) {
@@ -746,7 +827,7 @@ class Game {
     revive() {
         this.isGameOver = false;
         const rx = Math.max(100, Math.min(CONFIG.canvasWidth - 100, this.player.position.x));
-        const ry = this.player.position.y - 600;
+        const ry = this.modeStrategy.getReviveY();
         Body.setPosition(this.player, { x: rx, y: ry });
         Body.setVelocity(this.player, { x: 0, y: 0 });
         const s = Bodies.rectangle(rx, ry + 60, 200, 20, { isStatic: true, label: 'platform' });
@@ -755,21 +836,7 @@ class Game {
         this.createParticles(this.player.position, '#00ff88', 30);
     }
 
-    renderSkins() {
-        const container = document.getElementById('skin-container');
-        if (!container) return;
-        container.innerHTML = '';
-        SKINS.forEach(skin => {
-            const card = document.createElement('div');
-            card.className = `skin-card ${this.activeSkinId === skin.id ? 'selected' : ''}`;
-            card.innerHTML = `<div class="skin-preview" style="background: ${skin.color}"></div><h3>${skin.name}</h3>`;
-            card.onclick = () => {
-                this.activeSkinId = skin.id; localStorage.setItem('activeSkin', skin.id);
-                this.renderSkins();
-            };
-            container.appendChild(card);
-        });
-    }
+
 
     drawCachedPlatform() {
         const pctx = this.platformCanvas.getContext('2d');
@@ -791,389 +858,19 @@ class Game {
     }
 
     renderWorldManual() {
-        const ctx = this.ctx;
-        if (!ctx) return;
-
-        // 1. Clear with animated gradient background
-        const bgTime = performance.now() / 2000;
-        const bgOffset1 = Math.sin(bgTime) * 300;
-        const bgOffset2 = Math.cos(bgTime) * 300;
-        const grad = ctx.createLinearGradient(0, bgOffset1, 0, Math.max(window.innerHeight, this.canvas.height) + bgOffset2);
-        grad.addColorStop(0, this.currentTheme.bg[0]);
-        grad.addColorStop(1, this.currentTheme.bg[1]);
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, this.canvas.width + 1000, this.canvas.height + 1000);
-
-        // 2. Camera & Global Transform
-        ctx.save();
-
-        // Centering & Scaling logic
-        // We want our 600px wide game logic to fit horizontally
-        const scale = this.canvas.width / CONFIG.canvasWidth;
-        ctx.scale(scale, scale);
-
-        // Vertical Camera sync
-        if (this.player) {
-            const targetY = -this.player.position.y + (this.canvas.height / scale) / 2 + 100;
-            this.cameraY += (targetY - this.cameraY) * 0.1;
-        }
-        ctx.translate(0, this.cameraY);
-
-        // Draw physical side walls (Animated Glowing Laser Barriers)
-        const viewTop = -this.cameraY - 1000;
-        const viewHeight = (this.canvas.height / scale) + 2000;
-
-        ctx.fillStyle = '#111116';
-        ctx.fillRect(0, viewTop, 20, viewHeight); // left wall
-        ctx.fillRect(CONFIG.canvasWidth - 20, viewTop, 20, viewHeight); // right wall
-
-        // Laser barrier inner edge animation
-        const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 300);
-        ctx.fillStyle = `rgba(0, 255, 136, ${0.4 * pulse})`;
-        ctx.fillRect(18, viewTop, 2, viewHeight);
-        ctx.fillRect(CONFIG.canvasWidth - 20, viewTop, 2, viewHeight);
-
-        // Draw Earth surface for the start!
-        ctx.fillStyle = '#3a2318'; // Dark earth dirt
-        const surfaceY = this.gameMode === 'climb' ? CONFIG.canvasHeight : 0;
-        const surfaceH = this.gameMode === 'climb' ? 10000 : -10000;
-        ctx.fillRect(-50, surfaceY, CONFIG.canvasWidth + 100, surfaceH);
-        ctx.fillStyle = '#00af50'; // Grass top
-        ctx.fillRect(-50, surfaceY, CONFIG.canvasWidth + 100, this.gameMode === 'climb' ? 20 : -20);
-
-        // 3. Draw Stars
-        const time = performance.now() / 1000;
-        this.stars.forEach(s => {
-            s.y = (s.y + 0.2) % (this.canvas.height / scale + 1000);
-            ctx.fillStyle = `rgba(255,255,255,${s.opacity * (0.6 + 0.4 * Math.sin(time + s.x))})`;
-            ctx.fillRect(s.x, s.y - 500, s.size, s.size);
-        });
-
-        // 4. Draw Platforms
-        this.platforms.forEach(p => {
-            if (p.label === 'platform') {
-                const w = p.bounds.max.x - p.bounds.min.x;
-                ctx.save();
-                if (p.isCrumbling && p.crumbleTimer > 0) {
-                    const shake = Math.sin(performance.now() * 0.1) * 3;
-                    ctx.translate(shake, 0);
-                    ctx.filter = 'contrast(1.5) brightness(1.2)';
-                }
-                
-                if (p.isCrumbling) {
-                    // Draw a unique aesthetic for crumbling platforms
-                    ctx.fillStyle = p.crumbleTimer > 0 ? '#ffae00' : '#d2b48c'; // Tan to Orange
-                    ctx.strokeStyle = '#8b4513';
-                    ctx.lineWidth = 2;
-                    this.roundRect(ctx, p.position.x - w / 2, p.position.y - 6, w, 15, 4);
-                    ctx.fill();
-                    ctx.stroke();
-                    // Cracked lines
-                    ctx.beginPath();
-                    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
-                    ctx.moveTo(p.position.x - w/4, p.position.y - 6);
-                    ctx.lineTo(p.position.x - w/5, p.position.y + 9);
-                    ctx.stroke();
-                } else {
-                    ctx.drawImage(this.platformCanvas, 5, 5, 190, 15, p.position.x - w / 2, p.position.y - 6, w, 15);
-                }
-                ctx.restore();
-            } else if (p.label === 'pillar') {
-                const w = p.bounds.max.x - p.bounds.min.x;
-                const h = p.bounds.max.y - p.bounds.min.y;
-                ctx.fillStyle = '#00af50';
-                ctx.strokeStyle = '#00ff88';
-                ctx.lineWidth = 3;
-                this.roundRect(ctx, p.bounds.min.x, p.bounds.min.y, w, h, 8);
-                ctx.fill();
-                ctx.stroke();
-            } else if (p.label === 'hazard') {
-                ctx.fillStyle = '#ff2200';
-                ctx.fillRect(p.bounds.min.x, p.position.y - 6, p.bounds.max.x - p.bounds.min.x, 15);
-            }
-        });
-
-        // 4.5 Draw Powerups
-        this.powerups.forEach(p => {
-            ctx.save();
-            ctx.translate(p.position.x, p.position.y);
-            // Floating animation
-            ctx.translate(0, Math.sin(performance.now() / 200) * 10);
-            
-            // Draw glowing background
-            const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, 25);
-            glow.addColorStop(0, p.powerupType === 'shield' ? 'rgba(0, 209, 255, 0.4)' : 'rgba(255, 62, 62, 0.4)');
-            glow.addColorStop(1, 'transparent');
-            ctx.fillStyle = glow;
-            ctx.beginPath();
-            ctx.arc(0, 0, 25, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Icon circle
-            ctx.beginPath();
-            ctx.arc(0, 0, 15, 0, Math.PI * 2);
-            ctx.fillStyle = '#111';
-            ctx.strokeStyle = p.powerupType === 'shield' ? '#00d1ff' : '#ff3e3e';
-            ctx.lineWidth = 3;
-            ctx.fill();
-            ctx.stroke();
-
-            // Symbol
-            ctx.fillStyle = '#fff';
-            ctx.font = '800 14px Outfit';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(p.powerupType === 'shield' ? '🛡️' : '🧲', 0, 1);
-            ctx.restore();
-        });
-
-        // 5. Draw Enemies (Realistic Spiked Balls)
-        this.enemies.forEach(e => {
-            const numSpikes = 8;
-            const outerRadius = 18;
-            const innerRadius = 12;
-
-            ctx.save();
-            ctx.translate(e.position.x, e.position.y);
-            // Spin the enemy based on position to look like a rotating saw
-            ctx.rotate(e.position.x / 15);
-
-            ctx.beginPath();
-            for (let i = 0; i < numSpikes * 2; i++) {
-                const angle = (Math.PI / numSpikes) * i;
-                const r = i % 2 === 0 ? outerRadius : innerRadius;
-                if (i === 0) ctx.moveTo(Math.cos(angle) * r, Math.sin(angle) * r);
-                else ctx.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
-            }
-            ctx.closePath();
-            ctx.fillStyle = '#111';
-            ctx.fill();
-            ctx.strokeStyle = '#ff0044';
-            ctx.lineWidth = 3;
-            ctx.stroke();
-
-            // Inner glowing core
-            ctx.beginPath();
-            ctx.arc(0, 0, 5, 0, Math.PI * 2);
-            ctx.fillStyle = '#ff0044';
-            ctx.fill();
-
-            ctx.restore();
-        });
-
-        // 6. Draw Lava (Realistic Animated Waves)
-        ctx.save();
-        ctx.beginPath();
-        const drawLavaPos = this.lavaHeight;
-        const lavaExtra = this.gameMode === 'climb' ? 500 : -500;
-        ctx.moveTo(-100, drawLavaPos + lavaExtra); // start at bottom left
-        ctx.lineTo(-100, drawLavaPos); // go up to lava level
-
-        // Draw wavy surface or sharp spikes
-        if (this.gameMode === 'climb') {
-            for (let x = -100; x <= CONFIG.canvasWidth + 200; x += 10) {
-                const waveY = drawLavaPos + Math.sin((x / 30) + (time * 2)) * 8 + Math.cos((x / 50) - (time * 1.5)) * 6;
-                ctx.lineTo(x, waveY);
-            }
-        } else {
-            // RAZOR SHARP SPIKES for Fall mode
-            const spikeWidth = 30;
-            const spikeHeight = 70;
-            for (let x = -100; x <= CONFIG.canvasWidth + 200; x += spikeWidth) {
-                const vx = Math.sin(time * 10 + x) * 2;
-                ctx.lineTo(x + spikeWidth / 2 + vx, drawLavaPos + spikeHeight + Math.cos(time * 15 + x) * 5);
-                ctx.lineTo(x + spikeWidth, drawLavaPos);
-            }
-        }
-
-        ctx.lineTo(CONFIG.canvasWidth + 200, drawLavaPos + lavaExtra); // down to bottom right
-        ctx.closePath();
-
-        // Fill lava with gradient
-        // Using absolute world coordinates for current screen area so gradient interpolates smoothly without glitching
-        const screenBottomRaw = -this.cameraY + this.canvas.height / scale;
-        const lavaTop = this.gameMode === 'climb' ? drawLavaPos - 10 : drawLavaPos + 10;
-        const lavaBottom = this.gameMode === 'climb' 
-            ? Math.max(lavaTop + 100, screenBottomRaw)
-            : Math.min(lavaTop - 100, -this.cameraY);
-
-        const lavaGrad = ctx.createLinearGradient(0, lavaTop, 0, lavaBottom);
-        lavaGrad.addColorStop(0, '#ffcc00'); // fiery yellow top
-        lavaGrad.addColorStop(Math.min(0.2, Math.abs(100 / (lavaBottom - lavaTop + 1))), '#ff3300'); // burning red
-        lavaGrad.addColorStop(1, '#660000'); // dark magma
-
-        ctx.fillStyle = lavaGrad;
-        ctx.fill();
-
-        // Add a glowing top edge stroke to the lava
-        ctx.strokeStyle = 'rgba(255, 100, 0, 0.8)';
-        ctx.lineWidth = 4;
-        ctx.stroke();
-        ctx.restore();
-
-        // 7. Draw Player with Squash & Stretch
-        if (this.player) {
-            const skin = SKINS.find(s => s.id === this.activeSkinId);
-            const velY = Math.abs(this.player.velocity.y);
-            const stretch = 1 + Math.min(0.3, velY / 40);
-            const squash = 1 / stretch;
-
-            ctx.save();
-            ctx.translate(this.player.position.x, this.player.position.y);
-
-            // POWERUPS FX
-            if (this.hasShield) {
-                ctx.beginPath();
-                ctx.arc(0, 0, CONFIG.playerRadius + 12, 0, Math.PI * 2);
-                ctx.strokeStyle = `rgba(0, 209, 255, ${0.4 + 0.2 * Math.sin(performance.now() / 100)})`;
-                ctx.lineWidth = 4;
-                ctx.stroke();
-                // Subtle fill
-                ctx.fillStyle = 'rgba(0, 209, 255, 0.05)';
-                ctx.fill();
-            }
-
-            if (this.magnetTimer > 0) {
-                ctx.beginPath();
-                const magSize = 35 + Math.sin(performance.now() / 50) * 5;
-                ctx.arc(0, 0, magSize, 0, Math.PI * 2);
-                ctx.strokeStyle = 'rgba(255, 62, 62, 0.3)';
-                ctx.setLineDash([5, 5]);
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                ctx.setLineDash([]);
-            }
-
-            // Apply squash / stretch scale
-            ctx.scale(squash, stretch);
-
-            // Draw spinning body circle (opaque fill inside stroke)
-            ctx.save();
-            ctx.rotate(this.player.angle);
-            ctx.beginPath();
-            ctx.arc(0, 0, CONFIG.playerRadius, 0, Math.PI * 2);
-            ctx.fillStyle = '#050508';
-            ctx.fill();
-            ctx.strokeStyle = skin.color;
-            ctx.lineWidth = 4;
-            ctx.stroke();
-            ctx.restore();
-
-            // Draw upright Features (Eyes & thick lines for hands)
-            ctx.fillStyle = '#ffffff';
-
-            // Eyes (with cute blinking animation)
-            const eyeSpacing = 6;
-            const isBlinking = (performance.now() % 3500) < 150 || (velY < 0.5 && (performance.now() % 2000) < 100);
-
-            if (isBlinking) {
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.moveTo(-eyeSpacing - 4, -2);
-                ctx.lineTo(-eyeSpacing + 4, -2);
-                ctx.moveTo(eyeSpacing - 4, -2);
-                ctx.lineTo(eyeSpacing + 4, -2);
-                ctx.stroke();
-            } else {
-                ctx.beginPath();
-                ctx.arc(-eyeSpacing, -2, 5.5, 0, Math.PI * 2); // Left Eye
-                ctx.arc(eyeSpacing, -2, 5.5, 0, Math.PI * 2); // Right Eye
-                ctx.fill();
-            }
-
-            // Add tiny blush for cuteness
-            ctx.fillStyle = 'rgba(255, 100, 150, 0.6)';
-            ctx.beginPath();
-            ctx.arc(-eyeSpacing - 4, 3, 3.5, 0, Math.PI * 2);
-            ctx.arc(eyeSpacing + 4, 3, 3.5, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Hands (thick lines pointing outwards/downwards)
-            ctx.strokeStyle = skin.color;
-            ctx.lineWidth = 5;
-            ctx.lineCap = 'round';
-
-            ctx.beginPath();
-            // Left hand
-            ctx.moveTo(-16, 5);
-            ctx.lineTo(-24, 10);
-            // Right hand
-            ctx.moveTo(16, 5);
-            ctx.lineTo(24, 10);
-            ctx.stroke();
-
-            ctx.restore();
-        }
-
-        // 8. Draw Particles
-        for (let i = this.particles.length - 1; i >= 0; i--) {
-            const pt = this.particles[i];
-            pt.x += pt.vx; pt.y += pt.vy; pt.vy += 0.15; pt.life -= 0.03;
-            if (pt.life <= 0) {
-                this.particlePool.push(this.particles.splice(i, 1)[0]);
-                continue;
-            }
-            ctx.fillStyle = pt.color;
-            ctx.globalAlpha = pt.life;
-            ctx.beginPath();
-            ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.globalAlpha = 1;
-        }
-
-        ctx.restore();
+        this.renderer.render();
     }
 
-    createExplosion(pos, color, count) {
-        for (let i = 0; i < count; i++) {
-            const p = this.particlePool.pop() || {};
-            p.x = pos.x; p.y = pos.y; p.vx = (Math.random() - 0.5) * 12; p.vy = (Math.random() - 0.5) * 12;
-            p.life = 1; p.color = color; this.particles.push(p);
-        }
-    }
+    createExplosion(pos, color, count) { this.particleSystem.createExplosion(pos, color, count); }
+    createParticles(pos, color, count) { this.particleSystem.createParticles(pos, color, count); }
+    createCuteTrail() { this.particleSystem.createCuteTrail(this.player, SKINS.find(s => s.id === this.activeSkinId), this.isGameOver); }
 
-    createParticles(pos, color, count) {
-        for (let i = 0; i < count; i++) {
-            const p = this.particlePool.pop() || {};
-            p.x = pos.x; p.y = pos.y; p.vx = (Math.random() - 0.5) * 15; p.vy = (Math.random() - 1) * 15;
-            p.life = 1; p.color = color; this.particles.push(p);
-        }
-    }
-
-    createCuteTrail() {
-        if (!this.player || this.isGameOver) return;
-        const speedSq = this.player.velocity.x * this.player.velocity.x + this.player.velocity.y * this.player.velocity.y;
-        if (speedSq > 5 && Math.random() < 0.3) {
-            const p = this.particlePool.pop() || {};
-            p.x = this.player.position.x + (Math.random() - 0.5) * 20;
-            p.y = this.player.position.y + (Math.random() - 0.5) * 20;
-            p.vx = (Math.random() - 0.5) * 2;
-            p.vy = (Math.random() - 0.5) * 2;
-            p.life = 1;
-            const skin = SKINS.find(s => s.id === this.activeSkinId);
-            p.color = skin ? skin.color : '#ffffff';
-            this.particles.push(p);
-        }
-    }
-
-    _playTone(freq, type = 'sine', when = 0, duration = 0.08) {
-        if (!this.audio) return;
-        try {
-            const now = this.audio.currentTime + when;
-            const o = this.audio.createOscillator(); const g = this.audio.createGain();
-            o.type = type; o.frequency.setValueAtTime(freq, now);
-            g.gain.setValueAtTime(0.001, now); g.gain.exponentialRampToValueAtTime(0.15, now + 0.01);
-            g.gain.exponentialRampToValueAtTime(0.001, now + duration);
-            o.connect(g); g.connect(this.masterGain); o.start(now); o.stop(now + duration + 0.02);
-        } catch (e) { }
-    }
-
-    playJump() { this._playTone(520, 'sawtooth', 0, 0.09); }
-    playCoin() { this._playTone(920, 'sine', 0, 0.08); }
-    playLevelUp() { this._playTone(720, 'triangle', 0, 0.18); this._playTone(980, 'sine', 0.05, 0.12); }
-    playGameOver() { this._playTone(120, 'sine', 0, 0.4); }
-    playFall() { this._playTone(300, 'sawtooth', 0, 0.5); }
+    _playTone(freq, type = 'sine', when = 0, duration = 0.08) { this.audioManager._playTone(freq, type, when, duration); }
+    playJump() { this.audioManager.playJump(); }
+    playCoin() { this.audioManager.playCoin(); }
+    playLevelUp() { this.audioManager.playLevelUp(); }
+    playGameOver() { this.audioManager.playGameOver(); }
+    playFall() { this.audioManager.playFall(); }
 
     showLevelUpToast(level) {
         const el = document.createElement('div'); el.id = 'level-up-toast';
@@ -1184,48 +881,55 @@ class Game {
 
     cullAndGeneratePlatforms() {
         if (!this.player || this.isGameOver) return;
-        const ly = this.lavaHeight + (this.gameMode === 'climb' ? 500 : -500), py = this.player.position.y;
+        const ly = this.modeStrategy.getLavaOffset(this.lavaHeight);
+        const py = this.player.position.y;
         for (let i = this.platforms.length - 1; i >= 0; i--) {
-            // Cull platforms below lava OR far below the player
-            const toCull = this.gameMode === 'climb'
-                ? (this.platforms[i].position.y > Math.min(ly, py + 1500))
-                : (this.platforms[i].position.y < Math.max(ly, py - 1500));
-            
-            if (toCull) {
-                World.remove(this.world, this.platforms[i]); this.platforms.splice(i, 1);
+            if (this.modeStrategy.shouldCullPlatform(this.platforms[i].position.y, ly, py)) {
+                const p = this.platforms[i];
+                World.remove(this.world, p);
+                this.platforms.splice(i, 1);
+                if (p.label === 'pillar') this.pool.pillar.push(p);
+                else this.pool.platform.push(p);
             }
         }
         for (let i = this.powerups.length - 1; i >= 0; i--) {
-            if (this.powerups[i].position.y > Math.min(ly, py + 1500) || this.powerups[i].position.y < Math.max(ly, py - 1500)) {
-                World.remove(this.world, this.powerups[i]); this.powerups.splice(i, 1);
+            if (this.modeStrategy.shouldCullPlatform(this.powerups[i].position.y, ly, py)) {
+                this.pool.powerup.push(this.powerups[i]);
+                World.remove(this.world, this.powerups[i]); 
+                this.powerups.splice(i, 1);
+            }
+        }
+        for (let i = this.activeCoins.length - 1; i >= 0; i--) {
+            if (this.modeStrategy.shouldCullPlatform(this.activeCoins[i].position.y, ly, py)) {
+                this.pool.coin.push(this.activeCoins[i]);
+                World.remove(this.world, this.activeCoins[i]); 
+                this.activeCoins.splice(i, 1);
             }
         }
         const settings = DIFFICULTY_SETTINGS[this.difficulty];
-        let nextY = this.platforms.length 
-            ? (this.gameMode === 'climb' 
-                ? this.platforms.reduce((m, p) => Math.min(m, p.position.y), Infinity)
-                : this.platforms.reduce((m, p) => Math.max(m, p.position.y), -Infinity))
-            : py;
+        let nextY = this.modeStrategy.getNextPlatformY(this.platforms, py, settings);
 
-        while (!this.isGameOver && this.platforms.length < 40) {
-            const checkDist = this.gameMode === 'climb' ? (py < nextY + 2500) : (py > nextY - 2500);
-            if (!checkDist) break;
-
-            const offset = (settings.gapHeight * (0.8 + Math.random() * 0.9));
-            nextY = this.gameMode === 'climb' ? nextY - offset : nextY + offset;
+        while (nextY !== null && !this.isGameOver && this.platforms.length < 40) {
             this.addPlatform(nextY, this.platforms.length);
             if (this.stage >= 1 && Math.random() < 0.1) {
-                const enemyOffset = this.gameMode === 'climb' ? -400 : 400;
-                this.addEnemy(nextY + enemyOffset);
+                this.addEnemy(nextY + this.modeStrategy.getEnemySpawnOffset());
             }
+            nextY = this.modeStrategy.getNextPlatformY(this.platforms, py, settings);
         }
     }
 
     addEnemy(y) {
         const x = Math.random() * (CONFIG.canvasWidth - 100) + 50;
-        const e = Bodies.rectangle(x, y, 40, 30, { isStatic: true, isSensor: true, label: 'enemy' });
+        let e = this.pool.enemy.pop();
+        if (e) {
+            Body.setPosition(e, {x, y});
+            World.add(this.world, e);
+        } else {
+            e = Bodies.rectangle(x, y, 40, 30, { isStatic: true, isSensor: true, label: 'enemy' });
+            World.add(this.world, e);
+        }
         e.moveSpeed = (Math.random() < 0.5 ? 2 : -2);
-        this.enemies.push(e); World.add(this.world, e);
+        this.enemies.push(e); 
     }
 
     handleResize() {
@@ -1235,30 +939,7 @@ class Game {
         // Disable Matter.js render options updates as we render manually
     }
 
-    renderPass() {
-        const container = document.getElementById('pass-rewards-container');
-        if (!container) return;
-        container.innerHTML = '';
-        for (let i = 1; i <= 10; i++) {
-            const isUnlocked = this.passLevel >= i;
-            const isClaimed = this.claimedRewards.includes(i);
-            const reward = document.createElement('div');
-            const clickableClass = (isUnlocked && !isClaimed) ? 'clickable-reward' : '';
-            reward.className = `reward-card ${isUnlocked ? 'unlocked' : ''} ${clickableClass}`;
-            let statusText = "LOCKED";
-            if (isClaimed) statusText = "CLAIMED";
-            else if (isUnlocked) statusText = "CLAIM";
-            reward.innerHTML = `<div class="stat-label">LVL ${i}</div>
-                <div style="font-size: 2rem">${i % 2 === 0 ? '👕' : '🪙'}</div>
-                <div class="stat-unit">${i % 2 === 0 ? 'Xmas Skin' : '+100 Coins'}</div>
-                <div style="font-size: 0.7rem; margin-top:5px; font-weight:bold; color:${isUnlocked && !isClaimed ? '#00ffa3' : '#666'}">${statusText}</div>`;
-            if (isUnlocked && !isClaimed) {
-                reward.style.cursor = 'pointer';
-                reward.onclick = () => this.claimReward(i);
-            }
-            container.appendChild(reward);
-        }
-    }
+
 
     claimReward(level) {
         if (this.claimedRewards.includes(level)) return;
