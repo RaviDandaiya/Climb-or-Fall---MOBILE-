@@ -85,6 +85,11 @@ class Game {
         this.lavaHeight = CONFIG.canvasHeight + 1000;
         this.isClimbing = false;
         this.controlMode = localStorage.getItem('controlMode') || 'touch';
+        this.gameMode = 'climb';
+        
+        this.hasShield = false;
+        this.magnetTimer = 0;
+        this.powerups = [];
 
         this.stars = Array.from({ length: 80 }, () => ({
             x: Math.random() * CONFIG.canvasWidth,
@@ -267,6 +272,21 @@ class Game {
             };
         }
 
+        const btnClimb = document.getElementById('mode-climb');
+        const btnFall = document.getElementById('mode-fall');
+        if (btnClimb && btnFall) {
+            btnClimb.onclick = () => {
+                this.gameMode = 'climb';
+                btnClimb.classList.add('active');
+                btnFall.classList.remove('active');
+            };
+            btnFall.onclick = () => {
+                this.gameMode = 'fall';
+                btnFall.classList.add('active');
+                btnClimb.classList.remove('active');
+            };
+        }
+
         const handleTapJumpStart = (e) => {
             // Always allow canvas tap to act as jump (perfect for hyper-casual)
             if (e.target.tagName !== 'BUTTON') {
@@ -299,7 +319,7 @@ class Game {
         this.difficulty = diff;
         const settings = DIFFICULTY_SETTINGS[diff];
         this.lavaSpeed = settings.lavaSpeed;
-        this.lavaHeight = CONFIG.canvasHeight + 1200;
+        this.lavaHeight = this.gameMode === 'climb' ? CONFIG.canvasHeight + 1200 : -1200;
         this.isGameOver = false;
         this.revivesLeft = 2; // Limit to 2 revives per game
         document.getElementById('difficulty-screen').classList.add('hidden');
@@ -324,8 +344,8 @@ class Game {
     }
 
     createPlayer() {
-        const skin = SKINS.find(s => s.id === this.activeSkinId);
-        this.player = Bodies.circle(CONFIG.canvasWidth / 2, CONFIG.canvasHeight - 150, CONFIG.playerRadius, {
+        const startY = this.gameMode === 'climb' ? CONFIG.canvasHeight - 150 : 150;
+        this.player = Bodies.circle(CONFIG.canvasWidth / 2, startY, CONFIG.playerRadius, {
             friction: 0.001,
             restitution: 0.1,
             label: 'player',
@@ -335,7 +355,8 @@ class Game {
     }
 
     createStartPlatform() {
-        const floor = Bodies.rectangle(CONFIG.canvasWidth / 2, CONFIG.canvasHeight + 100, CONFIG.canvasWidth * 10, 200, {
+        const floorY = this.gameMode === 'climb' ? CONFIG.canvasHeight + 100 : -100;
+        const floor = Bodies.rectangle(CONFIG.canvasWidth / 2, floorY, CONFIG.canvasWidth * 10, 200, {
             isStatic: true,
             label: 'floor'
         });
@@ -354,7 +375,10 @@ class Game {
 
     generateInitialPlatforms(settings) {
         for (let i = 0; i < 5; i++) {
-            this.addPlatform(CONFIG.canvasHeight - 60 - (i * settings.gapHeight), i);
+            const y = this.gameMode === 'climb' 
+                ? (CONFIG.canvasHeight - 60 - (i * settings.gapHeight))
+                : (60 + (i * settings.gapHeight));
+            this.addPlatform(y, i);
         }
     }
 
@@ -378,11 +402,47 @@ class Game {
             const width = (settings.platformWidth * 0.7) + (Math.random() * settings.platformWidth * 1.0);
             const x = (Math.random() * (CONFIG.canvasWidth - width - 60)) + width / 2 + 30;
             const isHazard = index > 15 && Math.random() < settings.hazardChance;
+            const isCrumbling = !isHazard && index > 10 && Math.random() < 0.15;
             const platform = Bodies.rectangle(x, y, width, CONFIG.platformHeight, { isStatic: true, label: isHazard ? 'hazard' : 'platform', render: { visible: false } });
+            if (isCrumbling) {
+                platform.isCrumbling = true;
+                platform.crumbleTimer = 0; // Not yet touched
+            }
             this.platforms.push(platform);
             World.add(this.world, platform);
-            if (!isHazard && Math.random() < 0.1) this.addCoin(x, y - 35);
+            if (!isHazard && !isCrumbling) {
+                const rng = Math.random();
+                if (rng < 0.1) this.addCoin(x, y - 35);
+                else if (rng < 0.15) this.addPowerup(x, y - 40); 
+            }
         }
+    }
+
+    addPowerup(x, y) {
+        const type = Math.random() < 0.5 ? 'shield' : 'magnet';
+        const p = Bodies.circle(x, y, 16, { isStatic: true, isSensor: true, label: 'powerup' });
+        p.powerupType = type;
+        this.powerups.push(p);
+        World.add(this.world, p);
+    }
+
+    collectPowerup(p) {
+        if (p.powerupType === 'shield') {
+            this.hasShield = true;
+            this.createExplosion(p.position, '#00d1ff', 20);
+        } else if (p.powerupType === 'magnet') {
+            this.magnetTimer = 600; // ~10 seconds
+            this.createExplosion(p.position, '#ff3e3e', 20);
+        }
+        World.remove(this.world, p);
+        this.powerups = this.powerups.filter(item => item !== p);
+        this._playTone(880, 'sine', 0, 0.15);
+    }
+
+    consumeShield() {
+        this.hasShield = false;
+        this.createExplosion(this.player.position, '#00d1ff', 30);
+        this._playTone(220, 'sawtooth', 0, 0.3);
     }
 
     addCoin(x, y) {
@@ -399,6 +459,21 @@ class Game {
         this.updateEnemies();
         this.checkCollisions();
         this.cullAndGeneratePlatforms();
+        
+        if (this.magnetTimer > 0) {
+            this.magnetTimer--;
+            Composite.allBodies(this.world).forEach(b => {
+                if (b.label === 'coin') {
+                    const dx = this.player.position.x - b.position.x;
+                    const dy = this.player.position.y - b.position.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    if (dist < 250) {
+                        const force = (250 - dist) / 2500;
+                        Body.translate(b, { x: dx * force * 2, y: dy * force * 2 });
+                    }
+                }
+            });
+        }
 
         if (this.player && this.leftWall && this.rightWall) {
             Body.setPosition(this.leftWall, { x: 10, y: this.player.position.y });
@@ -406,16 +481,35 @@ class Game {
         }
 
         if (this.shake > 0) this.shake *= 0.9;
-        if (this.player.position.y > this.lavaHeight + 800) this.triggerDeath("FELL INTO THE ABYSS");
+        const abyssDead = this.gameMode === 'climb' 
+            ? (this.player.position.y > this.lavaHeight + 800)
+            : (this.player.position.y < this.lavaHeight - 800);
+        if (this.player && abyssDead) {
+            if (this.hasShield) {
+                this.consumeShield();
+                Body.setVelocity(this.player, { x: 0, y: this.gameMode === 'climb' ? -20 : 20 });
+            } else {
+                this.triggerDeath(this.gameMode === 'climb' ? "FELL INTO THE ABYSS" : "SOARED TO OBLIVION");
+            }
+        }
     }
 
     updatePlatforms() {
-        this.platforms.forEach(p => {
+        const now = performance.now();
+        for (let i = this.platforms.length - 1; i >= 0; i--) {
+            const p = this.platforms[i];
             if (p.isMoving) {
                 if (p.position.x < p.minX || p.position.x > p.maxX) p.moveSpeed *= -1;
                 Body.translate(p, { x: p.moveSpeed, y: 0 });
             }
-        });
+            if (p.isCrumbling && p.crumbleTimer > 0) {
+                if (now - p.crumbleTimer > 1500) {
+                    this.createExplosion(p.position, '#ccaa88', 15);
+                    World.remove(this.world, p);
+                    this.platforms.splice(i, 1);
+                }
+            }
+        }
     }
 
     updateEnemies() {
@@ -431,11 +525,20 @@ class Game {
         collisions.forEach(collision => {
             const other = collision.bodyA === this.player ? collision.bodyB : collision.bodyA;
             if (other.label === 'coin') this.collectCoin(other);
+            else if (other.label === 'powerup') this.collectPowerup(other);
             else if (this.isDashingFrames > 0 && (other.label === 'enemy' || other.label === 'hazard' || other.label === 'pillar')) {
-                // Invincible during dash, simply ignore
+                // Invincible
             }
-            else if (other.label === 'enemy') this.triggerDeath("SLAIN BY A FOE");
-            else if (other.label === 'hazard' && this.player.velocity.y > 0) this.triggerDeath("CATASTROPHE");
+            else if (other.label === 'enemy' || (other.label === 'hazard' && this.player.velocity.y > 0)) {
+                if (this.hasShield) {
+                    this.consumeShield();
+                } else {
+                    this.triggerDeath(other.label === 'enemy' ? "SLAIN BY A FOE" : "CATASTROPHE");
+                }
+            }
+            else if (other.label === 'platform' && other.isCrumbling && this.player.velocity.y > 0) {
+                if (other.crumbleTimer === 0) other.crumbleTimer = performance.now();
+            }
         });
     }
 
@@ -466,8 +569,14 @@ class Game {
         const maxMult = 3.5;
         const currentMult = 1 + this.maxHeight / 2000;
         const mult = Math.min(currentMult, maxMult);
-        this.lavaHeight -= this.lavaSpeed * mult;
-        if (this.player.position.y > this.lavaHeight) this.triggerDeath("CONSUMED BY LAVA");
+        
+        if (this.gameMode === 'climb') {
+            this.lavaHeight -= this.lavaSpeed * mult;
+            if (this.player.position.y > this.lavaHeight) this.triggerDeath("CONSUMED BY LAVA");
+        } else {
+            this.lavaHeight += this.lavaSpeed * mult;
+            if (this.player.position.y < this.lavaHeight) this.triggerDeath("IMPALED BY SPIKES");
+        }
     }
 
     handleInput() {
@@ -540,7 +649,8 @@ class Game {
     }
 
     updateStats() {
-        const h = Math.floor((CONFIG.canvasHeight - 150 - this.player.position.y) / 10);
+        const startY = this.gameMode === 'climb' ? CONFIG.canvasHeight - 150 : 150;
+        const h = Math.floor(Math.abs(startY - this.player.position.y) / 10);
         this.currentHeight = Math.max(0, h);
         if (this.currentHeight > this.maxHeight) {
             this.maxHeight = this.currentHeight; this.addXP(1);
@@ -725,9 +835,11 @@ class Game {
 
         // Draw Earth surface for the start!
         ctx.fillStyle = '#3a2318'; // Dark earth dirt
-        ctx.fillRect(-50, CONFIG.canvasHeight, CONFIG.canvasWidth + 100, 10000);
+        const surfaceY = this.gameMode === 'climb' ? CONFIG.canvasHeight : 0;
+        const surfaceH = this.gameMode === 'climb' ? 10000 : -10000;
+        ctx.fillRect(-50, surfaceY, CONFIG.canvasWidth + 100, surfaceH);
         ctx.fillStyle = '#00af50'; // Grass top
-        ctx.fillRect(-50, CONFIG.canvasHeight, CONFIG.canvasWidth + 100, 20);
+        ctx.fillRect(-50, surfaceY, CONFIG.canvasWidth + 100, this.gameMode === 'climb' ? 20 : -20);
 
         // 3. Draw Stars
         const time = performance.now() / 1000;
@@ -741,7 +853,31 @@ class Game {
         this.platforms.forEach(p => {
             if (p.label === 'platform') {
                 const w = p.bounds.max.x - p.bounds.min.x;
-                ctx.drawImage(this.platformCanvas, 5, 5, 190, 15, p.position.x - w / 2, p.position.y - 6, w, 15);
+                ctx.save();
+                if (p.isCrumbling && p.crumbleTimer > 0) {
+                    const shake = Math.sin(performance.now() * 0.1) * 3;
+                    ctx.translate(shake, 0);
+                    ctx.filter = 'contrast(1.5) brightness(1.2)';
+                }
+                
+                if (p.isCrumbling) {
+                    // Draw a unique aesthetic for crumbling platforms
+                    ctx.fillStyle = p.crumbleTimer > 0 ? '#ffae00' : '#d2b48c'; // Tan to Orange
+                    ctx.strokeStyle = '#8b4513';
+                    ctx.lineWidth = 2;
+                    this.roundRect(ctx, p.position.x - w / 2, p.position.y - 6, w, 15, 4);
+                    ctx.fill();
+                    ctx.stroke();
+                    // Cracked lines
+                    ctx.beginPath();
+                    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+                    ctx.moveTo(p.position.x - w/4, p.position.y - 6);
+                    ctx.lineTo(p.position.x - w/5, p.position.y + 9);
+                    ctx.stroke();
+                } else {
+                    ctx.drawImage(this.platformCanvas, 5, 5, 190, 15, p.position.x - w / 2, p.position.y - 6, w, 15);
+                }
+                ctx.restore();
             } else if (p.label === 'pillar') {
                 const w = p.bounds.max.x - p.bounds.min.x;
                 const h = p.bounds.max.y - p.bounds.min.y;
@@ -755,6 +891,40 @@ class Game {
                 ctx.fillStyle = '#ff2200';
                 ctx.fillRect(p.bounds.min.x, p.position.y - 6, p.bounds.max.x - p.bounds.min.x, 15);
             }
+        });
+
+        // 4.5 Draw Powerups
+        this.powerups.forEach(p => {
+            ctx.save();
+            ctx.translate(p.position.x, p.position.y);
+            // Floating animation
+            ctx.translate(0, Math.sin(performance.now() / 200) * 10);
+            
+            // Draw glowing background
+            const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, 25);
+            glow.addColorStop(0, p.powerupType === 'shield' ? 'rgba(0, 209, 255, 0.4)' : 'rgba(255, 62, 62, 0.4)');
+            glow.addColorStop(1, 'transparent');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(0, 0, 25, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Icon circle
+            ctx.beginPath();
+            ctx.arc(0, 0, 15, 0, Math.PI * 2);
+            ctx.fillStyle = '#111';
+            ctx.strokeStyle = p.powerupType === 'shield' ? '#00d1ff' : '#ff3e3e';
+            ctx.lineWidth = 3;
+            ctx.fill();
+            ctx.stroke();
+
+            // Symbol
+            ctx.fillStyle = '#fff';
+            ctx.font = '800 14px Outfit';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(p.powerupType === 'shield' ? '🛡️' : '🧲', 0, 1);
+            ctx.restore();
         });
 
         // 5. Draw Enemies (Realistic Spiked Balls)
@@ -794,27 +964,42 @@ class Game {
         // 6. Draw Lava (Realistic Animated Waves)
         ctx.save();
         ctx.beginPath();
-        ctx.moveTo(-100, this.lavaHeight + 500); // start at bottom left
-        ctx.lineTo(-100, this.lavaHeight); // go up to lava level
+        const drawLavaPos = this.lavaHeight;
+        const lavaExtra = this.gameMode === 'climb' ? 500 : -500;
+        ctx.moveTo(-100, drawLavaPos + lavaExtra); // start at bottom left
+        ctx.lineTo(-100, drawLavaPos); // go up to lava level
 
-        // Draw wavy surface using a sine wave
-        for (let x = -100; x <= CONFIG.canvasWidth + 200; x += 10) {
-            const waveY = this.lavaHeight + Math.sin((x / 30) + (time * 2)) * 8 + Math.cos((x / 50) - (time * 1.5)) * 6;
-            ctx.lineTo(x, waveY);
+        // Draw wavy surface or sharp spikes
+        if (this.gameMode === 'climb') {
+            for (let x = -100; x <= CONFIG.canvasWidth + 200; x += 10) {
+                const waveY = drawLavaPos + Math.sin((x / 30) + (time * 2)) * 8 + Math.cos((x / 50) - (time * 1.5)) * 6;
+                ctx.lineTo(x, waveY);
+            }
+        } else {
+            // RAZOR SHARP SPIKES for Fall mode
+            const spikeWidth = 30;
+            const spikeHeight = 70;
+            for (let x = -100; x <= CONFIG.canvasWidth + 200; x += spikeWidth) {
+                const vx = Math.sin(time * 10 + x) * 2;
+                ctx.lineTo(x + spikeWidth / 2 + vx, drawLavaPos + spikeHeight + Math.cos(time * 15 + x) * 5);
+                ctx.lineTo(x + spikeWidth, drawLavaPos);
+            }
         }
 
-        ctx.lineTo(CONFIG.canvasWidth + 200, this.lavaHeight + 500); // down to bottom right
+        ctx.lineTo(CONFIG.canvasWidth + 200, drawLavaPos + lavaExtra); // down to bottom right
         ctx.closePath();
 
         // Fill lava with gradient
         // Using absolute world coordinates for current screen area so gradient interpolates smoothly without glitching
         const screenBottomRaw = -this.cameraY + this.canvas.height / scale;
-        const lavaTop = this.lavaHeight - 10;
-        const lavaBottom = Math.max(lavaTop + 100, screenBottomRaw);
+        const lavaTop = this.gameMode === 'climb' ? drawLavaPos - 10 : drawLavaPos + 10;
+        const lavaBottom = this.gameMode === 'climb' 
+            ? Math.max(lavaTop + 100, screenBottomRaw)
+            : Math.min(lavaTop - 100, -this.cameraY);
 
         const lavaGrad = ctx.createLinearGradient(0, lavaTop, 0, lavaBottom);
         lavaGrad.addColorStop(0, '#ffcc00'); // fiery yellow top
-        lavaGrad.addColorStop(Math.min(0.2, 100 / (lavaBottom - lavaTop + 1)), '#ff3300'); // burning red
+        lavaGrad.addColorStop(Math.min(0.2, Math.abs(100 / (lavaBottom - lavaTop + 1))), '#ff3300'); // burning red
         lavaGrad.addColorStop(1, '#660000'); // dark magma
 
         ctx.fillStyle = lavaGrad;
@@ -835,6 +1020,29 @@ class Game {
 
             ctx.save();
             ctx.translate(this.player.position.x, this.player.position.y);
+
+            // POWERUPS FX
+            if (this.hasShield) {
+                ctx.beginPath();
+                ctx.arc(0, 0, CONFIG.playerRadius + 12, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(0, 209, 255, ${0.4 + 0.2 * Math.sin(performance.now() / 100)})`;
+                ctx.lineWidth = 4;
+                ctx.stroke();
+                // Subtle fill
+                ctx.fillStyle = 'rgba(0, 209, 255, 0.05)';
+                ctx.fill();
+            }
+
+            if (this.magnetTimer > 0) {
+                ctx.beginPath();
+                const magSize = 35 + Math.sin(performance.now() / 50) * 5;
+                ctx.arc(0, 0, magSize, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(255, 62, 62, 0.3)';
+                ctx.setLineDash([5, 5]);
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
 
             // Apply squash / stretch scale
             ctx.scale(squash, stretch);
@@ -976,20 +1184,40 @@ class Game {
 
     cullAndGeneratePlatforms() {
         if (!this.player || this.isGameOver) return;
-        const ly = this.lavaHeight + 500, py = this.player.position.y;
+        const ly = this.lavaHeight + (this.gameMode === 'climb' ? 500 : -500), py = this.player.position.y;
         for (let i = this.platforms.length - 1; i >= 0; i--) {
-            // Cull platforms below lava OR far below the player (fixes the 40-cap generation bug)
-            if (this.platforms[i].position.y > Math.min(ly, py + 1500)) {
+            // Cull platforms below lava OR far below the player
+            const toCull = this.gameMode === 'climb'
+                ? (this.platforms[i].position.y > Math.min(ly, py + 1500))
+                : (this.platforms[i].position.y < Math.max(ly, py - 1500));
+            
+            if (toCull) {
                 World.remove(this.world, this.platforms[i]); this.platforms.splice(i, 1);
             }
         }
+        for (let i = this.powerups.length - 1; i >= 0; i--) {
+            if (this.powerups[i].position.y > Math.min(ly, py + 1500) || this.powerups[i].position.y < Math.max(ly, py - 1500)) {
+                World.remove(this.world, this.powerups[i]); this.powerups.splice(i, 1);
+            }
+        }
         const settings = DIFFICULTY_SETTINGS[this.difficulty];
-        let highest = this.platforms.length ? this.platforms.reduce((m, p) => Math.min(m, p.position.y), Infinity) : py;
+        let nextY = this.platforms.length 
+            ? (this.gameMode === 'climb' 
+                ? this.platforms.reduce((m, p) => Math.min(m, p.position.y), Infinity)
+                : this.platforms.reduce((m, p) => Math.max(m, p.position.y), -Infinity))
+            : py;
 
-        while (!this.isGameOver && this.platforms.length < 40 && py < highest + 2500) {
-            highest = highest - (settings.gapHeight * (0.8 + Math.random() * 0.9));
-            this.addPlatform(highest, this.platforms.length);
-            if (this.stage >= 1 && Math.random() < 0.1) this.addEnemy(highest - 400);
+        while (!this.isGameOver && this.platforms.length < 40) {
+            const checkDist = this.gameMode === 'climb' ? (py < nextY + 2500) : (py > nextY - 2500);
+            if (!checkDist) break;
+
+            const offset = (settings.gapHeight * (0.8 + Math.random() * 0.9));
+            nextY = this.gameMode === 'climb' ? nextY - offset : nextY + offset;
+            this.addPlatform(nextY, this.platforms.length);
+            if (this.stage >= 1 && Math.random() < 0.1) {
+                const enemyOffset = this.gameMode === 'climb' ? -400 : 400;
+                this.addEnemy(nextY + enemyOffset);
+            }
         }
     }
 
