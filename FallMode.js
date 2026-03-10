@@ -9,8 +9,8 @@ export class FallMode {
         this.name = 'fall';
         
         // State for Continuous Free Fall
-        this.vStart = 1.2;
-        this.maxVelocity = 10;
+        this.vStart = 0.6;
+        this.maxVelocity = 7.0;
         this.currentWorldVel = this.vStart;
         
         this.isFastFalling = false;
@@ -36,8 +36,8 @@ export class FallMode {
     }
 
     getInitialPlatformY(index, settings) {
-        // Space out the beginning to give the player time to adjust
-        return 600 + (index * 800);
+        // Reduced initial spacing because vertical speeds are drastically slower
+        return 500 + (index * 400);
     }
 
     getPlatformParams(index, settings) {
@@ -75,7 +75,8 @@ export class FallMode {
         const obstacleScale = 1 + (stage * sizeIncrease); 
 
         const minGap = CONFIG.playerRadius * 4.5; // Always larger than player width * 2
-        const gapSize = Math.max(minGap, 280 - (stage * 50)); 
+        // Make gaps wider at the start and scale down gently
+        const gapSize = Math.max(minGap, 320 - (stage * 45)); 
         const gapX = 100 + Math.random() * (CONFIG.canvasWidth - 200);
 
         // 3. Spawn Obstacle
@@ -269,15 +270,15 @@ export class FallMode {
         const stage = this.getDifficultyStage();
         let lastY = platforms.length ? platforms.reduce((m, p) => Math.max(m, p.position.y), 0) : playerY;
         
-        // Spawn rate: Reduction based on difficulty level
-        const baseSpawnInterval = 1000;
-        const reductionRate = 200;
-        const minSpawnInterval = 350;
+        // Target closer vertical spawn intervals since the player is falling much slower
+        const baseSpawnInterval = 600;
+        const reductionRate = 100;
+        const minSpawnInterval = 250;
         
         const currentInterval = Math.max(minSpawnInterval, baseSpawnInterval - stage * reductionRate);
 
-        if (playerY > lastY - 2000) {
-            return lastY + currentInterval + (Math.random() * 200);
+        if (playerY > lastY - 1500) {
+            return lastY + currentInterval + (Math.random() * 100);
         }
         return null;
     }
@@ -315,26 +316,26 @@ export class FallMode {
         const stage = this.getDifficultyStage();
         
         // 2. World velocity scaling (Refined Speed Ramp according to README)
-        let targetSpeed = 1.2;
+        let targetSpeed = 0.6;
         if (this.timeSurvived < 20) {
-            targetSpeed = 1.2 + ((this.timeSurvived / 20) * 0.8); // 1.2 to 2.0
+            targetSpeed = 0.6 + ((this.timeSurvived / 20) * 0.4); // 0.6 to 1.0
         } else if (this.timeSurvived < 40) {
-            targetSpeed = 2.0 + (((this.timeSurvived - 20) / 20) * 1.5); // 2.0 to 3.5
+            targetSpeed = 1.0 + (((this.timeSurvived - 20) / 20) * 1.0); // 1.0 to 2.0
         } else if (this.timeSurvived < 60) {
-            targetSpeed = 3.5 + (((this.timeSurvived - 40) / 20) * 2.0); // 3.5 to 5.5
+            targetSpeed = 2.0 + (((this.timeSurvived - 40) / 20) * 1.5); // 2.0 to 3.5
         } else if (this.timeSurvived < 90) {
-            targetSpeed = 5.5 + (((this.timeSurvived - 60) / 30) * 2.0); // 5.5 to 7.5
+            targetSpeed = 3.5 + (((this.timeSurvived - 60) / 30) * 1.5); // 3.5 to 5.0
         } else if (this.timeSurvived < 120) {
-            targetSpeed = 7.5 + (((this.timeSurvived - 90) / 30) * 2.5); // 7.5 to 10
+            targetSpeed = 5.0 + (((this.timeSurvived - 90) / 30) * 2.0); // 5.0 to 7.0
         } else {
-            targetSpeed = 10;
+            targetSpeed = 7.0;
         }
         
         this.currentWorldVel = targetSpeed;
 
         // Clamp maximum falling speed to prevent impossible gameplay
-        if (game.player.velocity.y > 10) {
-            Body.setVelocity(game.player, { x: game.player.velocity.x, y: 10 });
+        if (game.player.velocity.y > 7.0) {
+            Body.setVelocity(game.player, { x: game.player.velocity.x, y: 7.0 });
         }
         
         // Ensure the player is always falling at least as fast as the world 

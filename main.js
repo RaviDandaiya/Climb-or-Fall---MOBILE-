@@ -138,7 +138,10 @@ class Game {
     }
 
     setupEventListeners() {
-        document.getElementById('retry-button').onclick = () => location.reload();
+        document.getElementById('retry-button').onclick = () => {
+            document.getElementById('death-screen').classList.add('hidden');
+            this.startGame(this.difficulty);
+        };
 
         document.querySelectorAll('.menu-btn').forEach(btn => {
             btn.onclick = () => this.startGame(btn.dataset.difficulty);
