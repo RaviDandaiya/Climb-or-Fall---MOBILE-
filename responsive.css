@@ -119,13 +119,27 @@
     }
 
     .modern-btn {
-        padding: 16px 12px;
-        font-size: 0.85rem;
+        padding: 14px 8px;
+        font-size: 0.75rem;
         border-radius: 16px;
+        gap: 5px;
+        letter-spacing: 0.5px;
     }
 
     .modern-btn .btn-icon {
-        font-size: 1.1rem;
+        font-size: 1rem;
+    }
+
+    .action-revive {
+        flex: 2;
+    }
+
+    .action-retry {
+        flex: 2;
+    }
+
+    .action-home {
+        flex: 1;
     }
 
 }

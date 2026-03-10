@@ -856,18 +856,19 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 10px;
-  padding: 20px;
+  gap: 8px;
+  padding: 18px 15px;
   border-radius: 20px;
   font-family: var(--font-main);
   font-weight: 800;
-  font-size: 1rem;
-  letter-spacing: 2px;
+  font-size: 0.95rem;
+  letter-spacing: 1px;
   border: none;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   position: relative;
   overflow: hidden;
+  white-space: nowrap;
 }
 
 .modern-btn .btn-icon {
@@ -875,7 +876,7 @@ body {
 }
 
 .action-retry {
-  flex: 2;
+  flex: 1.2;
   background: rgba(255, 255, 255, 0.05);
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -913,7 +914,7 @@ body {
 
 .action-revive {
   display: none; /* Block will be set by JS */
-  flex: 3;
+  flex: 1.5;
   background: linear-gradient(135deg, #00ff88 0%, #00cc6c 100%);
   color: #000;
   border: none;

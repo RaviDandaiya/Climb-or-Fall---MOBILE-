@@ -112,23 +112,22 @@ class Game {
                 const delta = Math.min(time - this.lastTime, 50);
                 this.lastTime = time;
 
+                if (this.timeScale === undefined) this.timeScale = 1.0;
                 if (this.freezeEnd && time < this.freezeEnd) {
-                    if (this.shake > 0) this.shake *= 0.9;
-                    this.renderWorldManual();
-                    requestAnimationFrame(tick);
-                    return;
+                    this.timeScale = 0.15; // Slow mo instead of hard freeze
+                } else {
+                    this.timeScale = 1.0;
                 }
 
                 if (this.gameState === 'PLAYING' && this.player) {
-                    // Update Physics at a fixed timestep for consistency across devices
-                    Engine.update(this.engine, 16.666);
+                    Engine.update(this.engine, 16.666 * this.timeScale);
                     this.update();
                     this.createCuteTrail();
                 } else if (this.gameState === 'DEATH_ANIMATION' && this.player) {
-                    Engine.update(this.engine, 16.666);
-                    Body.setAngle(this.player, this.player.angle + 0.35); // 20 deg spin
-                    Body.setVelocity(this.player, { x: this.player.velocity.x, y: this.player.velocity.y + this.world.gravity.y * 0.1 }); // extra gravity
-                    if (this.shake > 0) this.shake *= 0.9;
+                    Engine.update(this.engine, 16.666 * this.timeScale);
+                    Body.setAngle(this.player, this.player.angle + 0.15 * this.timeScale); 
+                    // Manual gravity for consistent arcade feel during death
+                    Body.applyForce(this.player, this.player.position, { x: 0, y: 0.005 * this.timeScale });
 
                     if (time - this.deathTimerAnim > 1800) {
                         this.showGameOverUI();
@@ -704,30 +703,42 @@ class Game {
         const onGround = [-15, 0, 15].some(off => Matter.Query.ray(Composite.allBodies(this.world).filter(b => b.label === 'platform' || b.label === 'floor'), { x: this.player.position.x + off, y: this.player.position.y }, { x: this.player.position.x + off, y: this.player.position.y + CONFIG.playerRadius + 5 }).length > 0);
 
         let targetVx = 0;
-        if (this.controlMode === 'tilt' && this.gyroGamma !== 0) {
-            if (this.smoothedGamma === undefined) this.smoothedGamma = this.gyroGamma;
-            this.smoothedGamma += (this.gyroGamma - this.smoothedGamma) * 0.2; // faster smoothing
-            let tilt = this.smoothedGamma;
-            
-            const tiltSettings = this.modeStrategy.getTiltSettings();
-            if (Math.abs(tilt) > 3) targetVx = baseSpeed * Math.sign(tilt) * Math.min(tiltSettings.maxMult, Math.abs(tilt) / tiltSettings.sens);
+        if (this.vx === undefined) this.vx = 0;
+        const accel = 0.8;
+        const friction = 0.85;
+
+        if (this.keys['ArrowLeft'] || this.keys['KeyA']) {
+            this.vx -= accel;
+        } else if (this.keys['ArrowRight'] || this.keys['KeyD']) {
+            this.vx += accel;
+        } else if (this.controlMode === 'tilt' && this.gyroGamma !== 0) {
+             // Tilt is already smoothed via smoothedGamma, but we can integrate it to vx
+             const tiltSettings = this.modeStrategy.getTiltSettings();
+             let tiltVal = Math.sign(this.smoothedGamma) * Math.min(tiltSettings.maxMult, Math.abs(this.smoothedGamma) / tiltSettings.sens);
+             this.vx += tiltVal * accel;
+        } else {
+            this.vx *= friction;
         }
-        if (this.keys['ArrowLeft'] || this.keys['KeyA']) targetVx = -baseSpeed;
-        else if (this.keys['ArrowRight'] || this.keys['KeyD']) targetVx = baseSpeed;
+
+        // Clamp speed
+        this.vx = Math.max(-baseSpeed, Math.min(baseSpeed, this.vx));
 
         if (this.dashCooldown > 0) this.dashCooldown--;
         if (this.isDashingFrames > 0) {
             this.isDashingFrames--;
-            this.createCuteTrail(); // Intense trail
+            this.createCuteTrail(); 
         }
 
         if ((this.keys['PowerDash'] || this.keys['KeyE'] || this.keys['ShiftLeft']) && this.dashCooldown <= 0) {
-            this.modeStrategy.handleDash(this, targetVx);
+            this.modeStrategy.handleDash(this, this.vx);
             this.keys['PowerDash'] = false; this.keys['KeyE'] = false; this.keys['ShiftLeft'] = false;
         }
 
-        if (targetVx !== 0) Body.setVelocity(this.player, { x: targetVx, y: vel.y });
-        else Body.setVelocity(this.player, { x: vel.x * 0.8, y: vel.y });
+        if (Math.abs(this.vx) > 0.1) {
+            Body.setVelocity(this.player, { x: this.vx, y: vel.y });
+        } else {
+            Body.setVelocity(this.player, { x: vel.x * 0.9, y: vel.y });
+        }
 
         // Landing Juice
         if (onGround && this.wasFallingLastFrame) {
@@ -744,8 +755,10 @@ class Game {
 
     updateStats() {
         const startY = this.modeStrategy.getPlayerStartY();
-        const h = Math.floor(Math.abs(startY - this.player.position.y) / 10);
-        this.currentHeight = Math.max(0, h);
+        const rawH = Math.abs(startY - this.player.position.y) / 10;
+        // Check if we are still at the start to ensure 0
+        const h = rawH < 2 ? 0 : Math.floor(rawH);
+        this.currentHeight = h;
         
         this.score = this.currentHeight + this.scoreBonus;
 
