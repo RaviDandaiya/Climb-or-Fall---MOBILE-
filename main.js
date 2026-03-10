@@ -488,6 +488,27 @@ class Game {
             this.modeStrategy.updateFallMechanics(this);
         }
 
+        // --- UI Cooldown Animations ---
+        const btnPower = document.getElementById('btn-power');
+        if (btnPower) {
+            const maxDash = this.maxDashCooldown || 120;
+            const dashVal = this.dashCooldown > 0 ? this.dashCooldown : 0;
+            const dashPct = 100 - ((dashVal / maxDash) * 100);
+            btnPower.style.setProperty('--cd-pct', `${dashPct}%`);
+        }
+
+        const btnJump = document.getElementById('btn-jump');
+        if (btnJump) {
+            if (this.modeStrategy.name === 'fall') {
+                const maxBrake = this.modeStrategy.maxBrakeCooldown || 100;
+                const brakeVal = this.modeStrategy.brakeCooldown > 0 ? this.modeStrategy.brakeCooldown : 0;
+                const brakePct = 100 - ((brakeVal / maxBrake) * 100);
+                btnJump.style.setProperty('--cd-pct', `${brakePct}%`);
+            } else {
+                btnJump.style.setProperty('--cd-pct', `100%`);
+            }
+        }
+
         if (this.magnetTimer > 0) {
             this.magnetTimer--;
             Composite.allBodies(this.world).forEach(b => {

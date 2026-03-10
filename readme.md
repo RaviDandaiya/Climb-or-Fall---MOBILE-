@@ -1,317 +1,175 @@
-# Fall Mode Difficulty Ramp – AI Implementation Prompt
+# Fall Mode Speed Rebalance – AI Implementation Prompt
 
 ## Objective
 
-Redesign **Fall Mode** so that the gameplay begins with **very easy obstacles** and gradually increases in difficulty as the player survives longer or falls deeper.
+The current falling speed in **Fall Mode** is too high, making it difficult for players to navigate obstacles and react properly.
 
-The goal is to create a **smooth onboarding experience** where new players learn the controls without feeling overwhelmed, while experienced players eventually face intense survival challenges.
+The gameplay should begin with **very slow falling speed** to allow players to understand the controls and observe the environment.
 
-Difficulty must increase **progressively and predictably**, not randomly.
+The falling speed must then **increase gradually over time**, creating a smooth difficulty curve.
 
 ---
 
 # Core Design Principle
 
-The first seconds of gameplay must **teach the player how to control the character**.
+The game should follow a **slow start → gradual acceleration → high-speed survival** structure.
 
-To achieve this:
+Early gameplay should feel:
 
-* Start with **small obstacles and wide open spaces**
-* Gradually introduce **larger hazards**
-* Later introduce **complex obstacle structures**
+* calm
+* readable
+* forgiving
 
-This prevents players from being scared or frustrated at the start and increases player retention.
+Later gameplay should feel:
+
+* intense
+* fast
+* challenging
+
+This prevents new players from quitting early due to difficulty.
 
 ---
 
-# Difficulty Scaling System
+# Starting Speed
 
-Difficulty should be controlled using a **stage-based progression system**.
+Reduce the initial falling/world speed significantly.
 
-Difficulty stages must be calculated based on:
+Example values:
 
+```id="s1"
+startSpeed = 1.2
 ```
-time survived
-or
-distance fallen
+
+This is intentionally slow to give players time to adjust.
+
+---
+
+# Maximum Speed
+
+The falling speed must have a limit to prevent impossible gameplay.
+
+Example:
+
+```id="s2"
+maxSpeed = 10
+```
+
+The game should never exceed this value.
+
+---
+
+# Gradual Speed Increase
+
+The speed should increase gradually based on **time survived or distance fallen**.
+
+Example formula:
+
+```javascript id="s3"
+worldSpeed = startSpeed + (acceleration * timeAlive)
+```
+
+Example values:
+
+```id="s4"
+acceleration = 0.02
+```
+
+This creates a smooth speed ramp.
+
+---
+
+# Speed Clamping
+
+Always clamp the final speed value:
+
+```javascript id="s5"
+worldSpeed = Math.min(worldSpeed, maxSpeed)
+```
+
+This ensures the game remains playable.
+
+---
+
+# Optional Depth-Based Scaling
+
+Alternatively, speed can scale with player depth:
+
+```javascript id="s6"
+worldSpeed = startSpeed + (depth * 0.003)
+```
+
+Where:
+
+```id="s7"
+depth = distanceFallen
+```
+
+---
+
+# Difficulty Milestones
+
+To make the progression feel noticeable, define speed milestones.
+
+Example:
+
+| Time Survived | Speed    |
+| ------------- | -------- |
+| 0 sec         | 1.2      |
+| 20 sec        | 2.0      |
+| 40 sec        | 3.5      |
+| 60 sec        | 5.5      |
+| 90 sec        | 7.5      |
+| 120+ sec      | 10 (max) |
+
+The increase should feel **smooth and natural**, not sudden.
+
+---
+
+# Integration Requirements
+
+This speed system must control the movement of:
+
+```id="s8"
+obstacles
+coins
+environment elements
 ```
 
 Example:
 
-```
-difficultyLevel = floor(timeSurvived / 20)
-```
-
-or
-
-```
-difficultyLevel = floor(depth / 100)
-```
-
-The difficulty level will determine:
-
-* obstacle size
-* obstacle spawn rate
-* obstacle complexity
-* world velocity
-
----
-
-# Stage 1 – Beginner (0–15 seconds)
-
-Purpose: **Teach player movement and controls**
-
-Spawn only **small, simple obstacles**.
-
-Obstacle examples:
-
-* small rocks
-* small monsters
-* single hazards
-
-Characteristics:
-
-* large empty spaces
-* slow world speed
-* low spawn rate
-* no complex patterns
-
-Players should have plenty of time to react.
-
-Example pattern:
-
-```
-     O
-
-        O
-   O
+```javascript id="s9"
+obstacle.y -= worldSpeed
+coin.y -= worldSpeed
 ```
 
 ---
 
-# Stage 2 – Early Challenge (15–40 seconds)
-
-Purpose: **Introduce basic navigation challenges**
-
-Obstacle types:
-
-* medium rocks
-* moving creatures
-* small obstacle clusters
-
-Characteristics:
-
-* slightly increased world speed
-* moderate spawn frequency
-* simple gap patterns
-
-Example pattern:
-
-```
-   O     O
-
-       O
-  O
-```
-
-Players begin needing quick reactions.
-
----
-
-# Stage 3 – Intermediate (40–80 seconds)
-
-Purpose: **Increase tension and reaction difficulty**
-
-Obstacle types:
-
-* larger hazards
-* rotating blades
-* small crusher traps
-
-Characteristics:
-
-* tighter gaps
-* faster world velocity
-* multiple obstacles appearing simultaneously
-
-Example pattern:
-
-```
- O  O  O
-
-     gap
- O       O
-```
-
-Players must navigate precisely.
-
----
-
-# Stage 4 – Advanced (80+ seconds)
-
-Purpose: **High-intensity survival gameplay**
-
-Obstacle types:
-
-* large platform-sized obstacles
-* horizontal crushers
-* rotating traps
-* obstacle walls
-
-Characteristics:
-
-* narrow gaps
-* fast obstacle movement
-* dense hazard clusters
-
-Example pattern:
-
-```
-████    ████
-   gap
-
-  █████████
-```
-
-This stage should feel intense and require skill.
-
----
-
-# Progressive Obstacle Introduction
-
-Obstacle types must unlock gradually.
-
-Example progression:
-
-Stage 1
-
-* small rocks
-
-Stage 2
-
-* medium hazards
-* monsters
-
-Stage 3
-
-* rotating blades
-* crusher traps
-
-Stage 4
-
-* large platform obstacles
-* complex obstacle walls
-
-This creates the feeling that the player is **falling deeper into a more dangerous cavern**.
-
----
-
-# Spawn System
-
-Obstacle spawning should use a **difficulty-based spawn table** instead of pure randomness.
-
-Example logic:
-
-```
-if difficultyLevel == 0
-spawnSmallObstacle()
-
-if difficultyLevel == 1
-spawnMediumObstacle()
-
-if difficultyLevel >= 2
-spawnLargeObstacle()
-```
-
-Spawn rate should increase gradually as well.
-
----
-
-# Difficulty Scaling Parameters
-
-The difficulty system must control the following values:
-
-World speed:
-
-```
-worldVelocity = baseSpeed + difficultyLevel * speedIncrease
-```
-
-Spawn rate:
-
-```
-spawnInterval = max(minSpawnTime, baseSpawnTime - difficultyLevel * reductionRate)
-```
-
-Obstacle size:
-
-```
-obstacleScale = baseSize + difficultyLevel * sizeIncrease
-```
-
-All values must be clamped to prevent impossible gameplay.
-
----
-
-# Player Experience Goals
+# Player Experience Goal
 
 The player experience should feel like:
 
-```
-calm start
+```id="s10"
+slow learning phase
 ↓
-learning controls
+moderate reaction gameplay
 ↓
-reacting to obstacles
-↓
-precision navigation
-↓
-high-speed survival
+fast intense survival
 ```
 
-The difficulty curve must feel **fair and rewarding**.
+Players should always feel that the game becomes faster because **they survived longer**, not because the game started unfairly fast.
 
 ---
 
 # Performance Requirements
 
-Maintain:
+Ensure that the speed system:
 
-* stable 60 FPS
-* object pooling for obstacles
-* no new object creation inside the game loop
-* capped particle effects
-
-Example:
-
-```
-MAX_PARTICLES = 150
-```
-
----
-
-# Integration Rules
-
-The difficulty ramp must be implemented inside:
-
-```
-FallMode.js
-```
-
-Do not modify:
-
-```
-ClimbMode.js
-core renderer
-input handler
-```
+* does not create sudden jumps in velocity
+* updates smoothly each frame
+* does not break object pooling
 
 ---
 
 # Final Goal
 
-The Fall Mode gameplay should feel like a **journey into an increasingly dangerous cavern**, where:
-
-* early gameplay is relaxing and approachable
-* mid-game becomes reactive and challenging
-* late-game becomes intense survival
+Fall Mode should feel fair and approachable at the start while gradually becoming intense and challenging as the player survives longer.

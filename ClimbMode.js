@@ -95,6 +95,7 @@ export class ClimbMode {
         Body.setVelocity(game.player, { x: targetVx, y: -40 });
         game.isDashingFrames = 25; // Invincible Dash time
         game.dashCooldown = 250;
+        game.maxDashCooldown = 250;
         game.shake = 15;
         game.createExplosion(game.player.position, '#00ff88', 25);
         game.playJump();

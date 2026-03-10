@@ -53,6 +53,18 @@
     user-select: none;
     touch-action: manipulation;
     transition: transform 0.1s, background 0.1s;
+    position: relative;
+    overflow: hidden;
+}
+
+.control-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(transparent var(--cd-pct, 100%), rgba(0, 0, 0, 0.7) 0);
+    pointer-events: none;
+    z-index: 1; /* Appears over the button but text opacity is a side effect representing disabled */
 }
 
 .control-btn:active,

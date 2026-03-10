@@ -9,9 +9,8 @@ export class FallMode {
         this.name = 'fall';
         
         // State for Continuous Free Fall
-        this.vStart = 3;
-        this.baseAcceleration = 0.03;
-        this.maxVelocity = 12;
+        this.vStart = 1.2;
+        this.maxVelocity = 10;
         this.currentWorldVel = this.vStart;
         
         this.isFastFalling = false;
@@ -174,7 +173,8 @@ export class FallMode {
     }
 
     createMovingCrusher(y, game, speedMult, gapSize) {
-        const speed = (2 + this.timeSurvived * 0.05) * speedMult;
+        // Slow down crushers significantly
+        const speed = (1 + this.timeSurvived * 0.02) * speedMult;
         const cWidth = (CONFIG.canvasWidth - gapSize) / 2;
         const leftX = -50;
         const rightX = CONFIG.canvasWidth + 50;
@@ -314,20 +314,32 @@ export class FallMode {
         
         const stage = this.getDifficultyStage();
         
-        // 2. World velocity scaling
-        this.currentWorldVel = Math.min(
-            this.maxVelocity, 
-            this.vStart + (this.baseAcceleration * this.timeSurvived)
-        );
+        // 2. World velocity scaling (Refined Speed Ramp according to README)
+        let targetSpeed = 1.2;
+        if (this.timeSurvived < 20) {
+            targetSpeed = 1.2 + ((this.timeSurvived / 20) * 0.8); // 1.2 to 2.0
+        } else if (this.timeSurvived < 40) {
+            targetSpeed = 2.0 + (((this.timeSurvived - 20) / 20) * 1.5); // 2.0 to 3.5
+        } else if (this.timeSurvived < 60) {
+            targetSpeed = 3.5 + (((this.timeSurvived - 40) / 20) * 2.0); // 3.5 to 5.5
+        } else if (this.timeSurvived < 90) {
+            targetSpeed = 5.5 + (((this.timeSurvived - 60) / 30) * 2.0); // 5.5 to 7.5
+        } else if (this.timeSurvived < 120) {
+            targetSpeed = 7.5 + (((this.timeSurvived - 90) / 30) * 2.5); // 7.5 to 10
+        } else {
+            targetSpeed = 10;
+        }
+        
+        this.currentWorldVel = targetSpeed;
 
-        // Clamp maximum falling speed
-        if (game.player.velocity.y > this.maxVelocity) {
-            Body.setVelocity(game.player, { x: game.player.velocity.x, y: this.maxVelocity });
+        // Clamp maximum falling speed to prevent impossible gameplay
+        if (game.player.velocity.y > 10) {
+            Body.setVelocity(game.player, { x: game.player.velocity.x, y: 10 });
         }
         
         // Ensure the player is always falling at least as fast as the world 
         // to prevent them getting stuck above the screen viewport
-        if (game.player.velocity.y < this.currentWorldVel * 0.4) {
+        if (game.player.velocity.y < this.currentWorldVel * 0.4 && this.brakeTimer <= 0) {
              Body.setVelocity(game.player, { x: game.player.velocity.x, y: this.currentWorldVel * 0.4 });
         }
 
@@ -401,6 +413,7 @@ export class FallMode {
         this.isBraking = true;
         this.brakeTimer = 35;
         this.brakeCooldown = 100;
+        this.maxBrakeCooldown = 100;
         
         Body.setVelocity(game.player, { x: game.player.velocity.x, y: game.player.velocity.y * 0.1 });
         game.createExplosion(game.player.position, '#00d1ff', 12);
@@ -421,6 +434,7 @@ export class FallMode {
         
         game.isDashingFrames = 15; 
         game.dashCooldown = 120;
+        game.maxDashCooldown = 120;
         game.shake = 15;
         
         game.createExplosion(game.player.position, '#8800ff', 18);
