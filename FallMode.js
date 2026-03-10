@@ -25,21 +25,33 @@ export class FallMode {
         return 60 + (index * settings.gapHeight);
     }
 
+    getPlatformParams(index, settings) {
+        const width = (settings.platformWidth * 0.7) + (Math.random() * settings.platformWidth * 0.6);
+        const x = (Math.random() * (CONFIG.canvasWidth - width - 60)) + width / 2 + 30;
+        return { width, x };
+    }
+
     createCustomPlatform(y, index, settings, game) {
-        if (index < 5 || game.isGameOver) return false;
+        if (game.isGameOver) return false;
 
         const depth = game.currentHeight || 0;
         const r = Math.random();
         
-        let pType = 'slalom';
-        if (depth > 200) {
-            if (r < 0.1) pType = 'glass';
-            else if (r < 0.25) pType = 'crusher';
-        } else if (depth > 50) {
-            if (r < 0.1) pType = 'glass';
-            else if (r < 0.2) pType = 'crusher';
-        } else {
-            if (Math.random() < settings.pillarChance) return false;
+        // Initial platforms should be standard or slalom to ensure stability
+        let pType = index < 5 ? 'slalom' : 'unknown';
+        
+        if (pType === 'unknown') {
+            if (depth > 200) {
+                if (r < 0.1) pType = 'glass';
+                else if (r < 0.25) pType = 'crusher';
+                else pType = 'slalom';
+            } else if (depth > 50) {
+                if (r < 0.1) pType = 'glass';
+                else if (r < 0.2) pType = 'crusher';
+                else pType = 'slalom';
+            } else {
+                pType = 'slalom';
+            }
         }
         
         if (pType !== 'slalom' && pType !== 'crusher' && pType !== 'glass') {
