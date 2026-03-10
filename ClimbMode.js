@@ -77,6 +77,10 @@ export class ClimbMode {
         return baseLava + 500;
     }
 
+    getReviveLavaHeight(playerY) {
+        return playerY + 1200;
+    }
+
     handleJump(game, onGround, jumpForce) {
         if (onGround && !game.jumpDebounce) {
             Body.setVelocity(game.player, { x: game.player.velocity.x, y: jumpForce });

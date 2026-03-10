@@ -791,13 +791,32 @@ class Game {
     revive() {
         this.isGameOver = false;
         const rx = Math.max(100, Math.min(CONFIG.canvasWidth - 100, this.player.position.x));
+        const oldY = this.player.position.y;
         const ry = this.modeStrategy.getReviveY();
+        
+        // Calculate the height jump to keep score consistent
+        const startY = this.modeStrategy.getPlayerStartY();
+        const oldH = Math.floor(Math.abs(startY - oldY) / 10);
+        const newH = Math.floor(Math.abs(startY - ry) / 10);
+        this.scoreBonus += (oldH - newH);
+
         Body.setPosition(this.player, { x: rx, y: ry });
         Body.setVelocity(this.player, { x: 0, y: 0 });
-        const s = Bodies.rectangle(rx, ry + 60, 200, 20, { isStatic: true, label: 'platform' });
-        World.add(this.world, s); this.platforms.push(s);
-        this.lavaHeight += 1200;
+        
+        // Mode-specific lava reset
+        this.lavaHeight = this.modeStrategy.getReviveLavaHeight(ry);
+
+        // Spawn a temporary safety platform
+        const s = Bodies.rectangle(rx, ry + 30, 250, 20, { isStatic: true, label: 'platform' });
+        World.add(this.world, s); 
+        this.platforms.push(s);
+        
+        this.updateStats(); // Force UI update
         this.createParticles(this.player.position, '#00ff88', 30);
+        this.shake = 10;
+        
+        // Brief invincibility frames
+        this.isDashingFrames = 60; 
     }
 
 

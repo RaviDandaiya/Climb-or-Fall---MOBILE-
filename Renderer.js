@@ -333,6 +333,11 @@ export class Renderer {
             ctx.save();
             ctx.translate(this.game.player.position.x, this.game.player.position.y);
 
+            // Ghost effect for invincibility/dash
+            if (this.game.isDashingFrames > 0) {
+                ctx.globalAlpha = 0.5;
+            }
+
             if (this.game.hasShield) {
                 ctx.beginPath();
                 ctx.arc(0, 0, CONFIG.playerRadius + 12, 0, Math.PI * 2);

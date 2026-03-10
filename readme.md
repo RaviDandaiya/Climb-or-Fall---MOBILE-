@@ -1,445 +1,381 @@
-# FreeFall JS
+# Fall Mode Gameplay Redesign Specification
 
-FreeFall JS is a **mobile-optimized 2D infinite falling survival game** built using **JavaScript and HTML5 Canvas**.
+## Objective
 
-Players guide a character through an endless cavern while avoiding obstacles, collecting coins, and surviving an ever-increasing difficulty curve.
+Update **Fall Mode** so that the player is in **continuous free fall** through a vertical cavern while avoiding procedurally generated obstacles and collecting coins.
 
-The game is designed for **smooth 60 FPS gameplay on mobile and desktop browsers**.
+The existing **platform-based gameplay must be removed**.
 
----
+Instead, the player falls continuously and must **steer left and right to avoid hazards**.
 
-# Core Game Concept
+This creates a **reaction-based survival gameplay loop**.
 
-Unlike traditional falling games where the player moves downward, FreeFall JS uses an **inverted world system**.
-
-The player remains vertically fixed while:
-
-* platforms and obstacles move upward
-* procedural terrain is generated endlessly
-* the difficulty increases with depth
-
-This architecture allows infinite gameplay while keeping performance stable.
+The system must integrate with the existing architecture without affecting **Climb Mode**.
 
 ---
 
-# Gameplay Overview
+# Core Gameplay Loop
 
-The goal is simple:
+The player:
 
-* survive as long as possible
-* collect coins
-* navigate increasingly difficult platform patterns
-* avoid crushers and deadly obstacles
+1. Falls continuously downward
+2. Uses tilt or buttons to steer horizontally
+3. Avoids obstacles
+4. Collects coins
+5. Survives as long as possible
 
-The deeper the player falls, the more dangerous the cavern becomes.
+Game ends when:
+
+```id="a7x2y1"
+player collides with obstacle
+```
+
+Score increases based on:
+
+* survival time
+* distance fallen
+* coins collected
 
 ---
 
-# Main Features
+# World Movement System
 
-## Infinite Procedural Gameplay
+Instead of moving the player downward, the world scrolls upward.
 
-Platforms and obstacles are generated dynamically using procedural rules.
+```javascript id="p2w5r9"
+obstacle.y -= worldVelocity
+coin.y -= worldVelocity
+```
 
-The game world continuously scrolls upward while the player falls deeper into the cavern.
+Player vertical position remains mostly fixed on screen.
 
 ---
 
-# Control System
+# Player Physics
 
-The game supports two input systems simultaneously.
+The player experiences **constant downward acceleration**.
 
-### Tilt Controls
+Example:
 
-Uses the device orientation sensor.
+```javascript id="c8d6y4"
+player.velocity.y += gravity
+```
 
-```javascript
+Clamp maximum fall speed:
+
+```javascript id="t4g9q1"
+player.velocity.y = Math.min(player.velocity.y, maxFallSpeed)
+```
+
+Example values:
+
+```id="u6n3k2"
+gravity = 0.6
+maxFallSpeed = 20
+```
+
+Horizontal movement remains controlled by tilt or buttons.
+
+---
+
+# Controls
+
+## Tilt Control
+
+Uses:
+
+```id="z8m1v3"
 DeviceOrientationEvent.gamma
 ```
 
 Logic:
 
-```javascript
+```javascript id="x5p7b4"
 if (Math.abs(gamma) > deadZone) {
-    player.vx += gamma * sensitivity;
+player.velocity.x += gamma * sensitivity
 }
 ```
 
 Dead zone:
 
-```
+```id="f3r2n1"
 2 degrees
 ```
 
-This prevents jitter when holding the phone steady.
-
 ---
 
-### Touch Buttons
+## Button Controls
 
 Two overlay buttons:
 
-* LEFT
-* RIGHT
-
-While a button is pressed:
-
-```javascript
-player.vx += acceleration
+```id="b6q4k9"
+LEFT
+RIGHT
 ```
 
-Velocity is capped:
+When pressed:
 
+```javascript id="m9e2c8"
+player.velocity.x += acceleration
 ```
+
+Velocity cap:
+
+```id="h5t7s1"
 player.maxSpeed
 ```
 
 ---
 
-# Movement Physics
+# Obstacle System
 
-Movement includes friction to create smooth deceleration.
+Platforms are removed completely.
 
-```javascript
-player.vx *= 0.9
+Instead, the game generates **falling corridor obstacles**.
+
+Obstacle types:
+
+### 1 Wall Segments
+
+Vertical rock formations that block parts of the cavern.
+
+Example:
+
+```
+|   gap   |
+|#### ####|
 ```
 
-This prevents sudden stops and makes tilt controls feel natural.
+Player must steer through the gap.
 
 ---
 
-# Procedural Platform System
+### 2 Moving Crushers
 
-Platforms are generated dynamically as the player falls.
+Two horizontal blocks move toward each other.
 
-Platform types include:
+If the player remains inside the gap too long they are crushed.
 
-* Standard platforms
-* Slalom gap platforms
-* Breakable glass platforms
-* Horizontal crushers
+Movement example:
 
-Object pooling is used to recycle platforms for performance.
-
-Platforms are recycled when leaving the screen.
-
-```javascript
-if (platform.y < -platform.height)
-    recyclePlatform()
+```javascript id="j3y9v2"
+leftBlock.x += crusherSpeed
+rightBlock.x -= crusherSpeed
 ```
+
+Crusher speed increases with difficulty.
 
 ---
 
-# Progressive Difficulty System
+### 3 Rotating Blades
 
-Difficulty increases based on player depth.
-
-As the player falls deeper:
-
-* platform gaps become narrower
-* crushers move faster
-* platform patterns become more complex
-
-Gap width scaling:
-
-```javascript
-gapWidth = Math.max(minGap, baseGap - depth * difficultyFactor)
-```
-
-Example values:
-
-```
-baseGap = 80
-difficultyFactor = 0.15
-minGap = player.width * 1.5
-```
-
----
-
-# New Obstacle Types
-
-## Horizontal Crushers
-
-Crushers appear in deeper sections of the cavern.
-
-They consist of two heavy blocks that move toward each other horizontally.
+Circular rotating hazards placed in the fall path.
 
 Behavior:
 
-* spawn with a center gap
-* slide inward over time
-* crushing the player causes instant game over
-
-Crusher speed scales with difficulty.
-
-```javascript
-crusherSpeed = baseCrusherSpeed + depth * 0.01
+```javascript id="g7c2w5"
+blade.rotation += rotationSpeed
 ```
+
+Collision results in instant game over.
 
 ---
 
-## Breakable Glass Platforms
+### 4 Laser Gates
 
-Glass platforms are fragile.
+Horizontal laser beams that activate periodically.
 
-When the player lands on them while falling downward:
+Logic example:
 
-* the platform shatters
-* a violent screen shake occurs
-* glass particles scatter
-* the player is forced into a rapid freefall
-
-Impact condition:
-
-```javascript
-player.velocity.y > 0
+```javascript id="n8u5p3"
+laser.active = time % 3 === 0
 ```
 
-Effects include:
-
-* screen shake
-* particle fragments
-* temporary velocity boost
+Players must time their fall.
 
 ---
 
-# Power-Ups
+# Procedural Generation
 
-The game contains several collectible power-ups.
+Obstacles spawn at the bottom of the screen.
 
-## Shield
+```javascript id="d4s8v1"
+spawnY = canvas.height + spawnBuffer
+```
 
-Protects the player from a single collision.
+Random gap placement:
+
+```javascript id="k9p6r3"
+gapX = random(minX, maxX)
+```
+
+Gap width must always be greater than:
+
+```id="y2m5f4"
+player.width * 2
+```
+
+This ensures every obstacle is technically passable.
 
 ---
 
-## Magnet
+# Object Pooling
 
-Pulls nearby coins toward the player.
+All obstacles must use object pooling.
 
-Coins smoothly curve toward the player when magnet is active.
+Recycle objects when they leave the screen.
 
----
-
-## Heavy Anchor
-
-A powerful temporary ability.
-
-When collected:
-
-* the player becomes extremely heavy
-* falling speed increases
-* platforms are smashed through on contact
-
-Duration:
-
-```
-5 seconds
+```javascript id="w3e6q8"
+if (obstacle.y < -obstacle.height)
+recycleObstacle()
 ```
 
-While anchor mode is active:
-
-* standard platforms break instantly
-* score increases rapidly
-* passive coins are rewarded
-
-Crushers remain lethal to maintain challenge.
+This prevents garbage collection spikes.
 
 ---
 
 # Coin System
 
-Coins spawn randomly inside platform gaps.
+Coins spawn randomly inside safe gaps.
 
-Collecting a coin:
+Collecting a coin grants:
 
+```id="s6t3v5"
++50 points
 ```
-+50 score
+
+Coin behavior:
+
+```javascript id="c2n7u9"
+coin.y -= worldVelocity
 ```
 
-Coins animate using sprite frames.
-
-Magnet power-ups attract coins toward the player.
+Optional magnet power-up can attract nearby coins.
 
 ---
 
 # Scoring System
 
-Score increases with distance traveled.
+Score is based on distance fallen.
 
+Formula:
+
+```id="e1v8r6"
+score = floor(distanceFallen / 10)
 ```
-Score = floor(totalDistance / 10)
+
+Additional score sources:
+
+```id="b7u4m2"
+coin collection
+near miss bonuses
 ```
-
-Bonus points:
-
-* coins
-* anchor smash events
-* optional near-miss bonuses
 
 ---
 
-# Near-Miss Bonus System
+# Difficulty Scaling
 
-Optional advanced mechanic.
+Difficulty increases as the player survives longer.
 
-If the player passes extremely close to crushers or walls without touching them:
+World velocity increases gradually.
 
-* sparks appear
-* score bonus is awarded
-* combo multiplier increases
+Formula:
 
-This encourages skilled risky movement.
+```id="z9k1n4"
+Vy = Vstart + (BaseAcceleration * time)
+```
+
+Example values:
+
+```id="p5x7g3"
+Vstart = 3
+BaseAcceleration = 0.03
+maxVelocity = 12
+```
+
+Velocity must be clamped to maintain fairness.
 
 ---
 
-# High Score Persistence
+# Collision System
 
-High scores are stored using:
+Use **AABB collision detection**.
 
-```
-localStorage
-```
+Check collisions between:
 
-Key:
-
-```
-freefall_highscore
+```id="r8m2j5"
+player vs obstacles
+player vs coins
 ```
 
-The high score appears on:
+Player hitbox should be slightly smaller than sprite.
 
-* start screen
-* game over screen
+```javascript id="t6y3q1"
+hitbox = spriteSize * 0.9
+```
 
 ---
 
 # Game States
 
-The engine supports three game states.
+Fall Mode must support:
 
-```
+```id="k4f9w2"
 START
 PLAYING
 GAMEOVER
 ```
 
-### Start Screen
-
-Displays:
-
-* game title
-* high score
-* start button
-
 ---
 
-### Playing
+# Performance Requirements
 
-The full gameplay loop is active.
+Maintain:
 
----
-
-### Game Over
-
-Displays:
-
-* final score
-* high score
-* restart option
-
----
-
-# Renderer
-
-The game uses a single responsive HTML5 canvas.
-
-Canvas size automatically adjusts to the screen.
-
-```javascript
-canvas.width = window.innerWidth
-canvas.height = window.innerHeight
+```id="v7b2n6"
+60 FPS on mobile
 ```
 
----
+Rules:
 
-# Performance Targets
+* no object creation inside the game loop
+* use object pooling
+* single canvas renderer
+* particle effects must be capped
 
-The game must maintain:
+Example particle limit:
 
-```
-60 FPS
-```
-
-Optimization strategies include:
-
-* object pooling
-* minimal DOM operations
-* single canvas rendering
-* capped particle systems
-
-Particle limit example:
-
-```
+```id="a2r8c4"
 MAX_PARTICLES = 150
 ```
 
 ---
 
-# Asset Loading
+# Integration Rules
 
-Assets are loaded before the game loop starts using a Promise-based loader.
+The changes must affect only:
 
-Assets include:
+```id="u9p5s3"
+FallMode.js
+```
 
-* player sprite
-* platform textures
-* coin animation
-* power-up visuals
+Do not modify:
+
+```id="j6c2q8"
+ClimbMode.js
+core renderer
+input handler
+```
+
+Fall Mode must remain compatible with the existing game engine.
 
 ---
 
-# Running the Game
+# Goal
 
-Clone the repository:
+The redesigned Fall Mode should feel like:
 
-```
-git clone https://github.com/yourname/freefall-js.git
-```
-
-Run a development server:
-
-```
-npm run dev
-```
-
-or open:
-
-```
-index.html
-```
-
----
-
-# Future Improvements
-
-Possible future additions:
-
-* sound effects and music
-* additional power-ups
-* biome themes for deeper levels
-* particle lighting effects
-* online leaderboards
-* daily challenge modes
-
----
-
-# License
-
-This project is open source and available under the MIT License.
-
----
-
-# Author
-
-FreeFall JS is designed as a **modular JavaScript game project demonstrating procedural generation, physics systems, and mobile-friendly browser gameplay.**
+* a **high-speed obstacle navigation game**
+* similar to falling through a dangerous cavern
+* focused on **reaction time and precision steering**
+* optimized for **mobile tilt gameplay**
