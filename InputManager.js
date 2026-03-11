@@ -118,25 +118,39 @@ export class InputManager {
 
     setupGameModeToggles() {
         const game = this.game;
-        const { ClimbMode } = game._modeClasses;
-        const { FallMode } = game._modeClasses;
+        const { ClimbMode, FallMode } = game._modeClasses;
 
         const btnClimb = document.getElementById('mode-climb');
         const btnFall = document.getElementById('mode-fall');
+        const easyDesc = document.querySelector('.menu-btn.easy .btn-desc');
+        const medDesc = document.querySelector('.menu-btn.medium .btn-desc');
+        const hardDesc = document.querySelector('.menu-btn.hard .btn-desc');
+
         if (!btnClimb || !btnFall) return;
 
-        btnClimb.onclick = () => {
+        const handleClimb = (e) => {
+            if (e) e.preventDefault();
             game.gameMode = 'climb';
             game.modeStrategy = new ClimbMode(game);
             btnClimb.classList.add('active');
             btnFall.classList.remove('active');
+            if(easyDesc) easyDesc.innerText = "Steady climb";
+            if(medDesc) medDesc.innerText = "Balanced challenge";
+            if(hardDesc) hardDesc.innerText = "Pure agony";
         };
-        btnFall.onclick = () => {
+        const handleFall = (e) => {
+            if (e) e.preventDefault();
             game.gameMode = 'fall';
             game.modeStrategy = new FallMode(game);
             btnFall.classList.add('active');
             btnClimb.classList.remove('active');
+            if(easyDesc) easyDesc.innerText = "Free falling";
+            if(medDesc) medDesc.innerText = "Lethal velocity";
+            if(hardDesc) hardDesc.innerText = "Absolute static";
         };
+
+        btnClimb.addEventListener('pointerdown', handleClimb);
+        btnFall.addEventListener('pointerdown', handleFall);
     }
 
     /**

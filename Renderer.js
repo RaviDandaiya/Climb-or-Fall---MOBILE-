@@ -21,10 +21,10 @@ export class Renderer {
         const pctx = this.platformCanvas.getContext('2d');
         const w = 200, h = CONFIG.platformHeight;
         pctx.clearRect(0, 0, 300, 30);
-        pctx.fillStyle = '#00af50'; pctx.strokeStyle = '#000'; pctx.lineWidth = 3;
+        pctx.fillStyle = '#666666'; pctx.strokeStyle = '#222222'; pctx.lineWidth = 3;
         this.roundRect(pctx, 5, 5, w - 10, h, 8);
         pctx.fill(); pctx.stroke();
-        pctx.fillStyle = '#00ff88';
+        pctx.fillStyle = '#b3b3b3';
         this.roundRect(pctx, 5, 5, w - 10, h * 0.4, 6);
         pctx.fill();
     }
@@ -54,14 +54,25 @@ export class Renderer {
         // 2. Camera & Global Transform
         ctx.save();
 
-        const scale = this.canvas.width / CONFIG.canvasWidth;
+        const scale = (this.canvas.width / CONFIG.canvasWidth) || 1;
         ctx.scale(scale, scale);
 
         if (this.game.player) {
-            const targetY = -this.game.player.position.y + (this.canvas.height / scale) / 2 + 100;
-            this.game.cameraY += (targetY - this.game.cameraY) * 0.1;
+            const viewportHeight = this.canvas.height / scale;
+            const offset = (this.game.modeStrategy && this.game.modeStrategy.name === 'fall') ? -viewportHeight * 0.25 : 100;
+            const targetY = -this.game.player.position.y + viewportHeight / 2 + offset;
+            
+            if (!isNaN(targetY)) {
+                if (this.game._isResettingCamera) {
+                    this.game.cameraY = targetY;
+                    this.game._isResettingCamera = false;
+                } else {
+                    this.game.cameraY += (targetY - this.game.cameraY) * 0.1;
+                    if (isNaN(this.game.cameraY)) this.game.cameraY = targetY;
+                }
+            }
         }
-        ctx.translate(0, this.game.cameraY);
+        ctx.translate(0, this.game.cameraY || 0);
 
         // Apply Juice: Screen Shake
         if (this.game.shake > 0.5) {
@@ -80,96 +91,129 @@ export class Renderer {
         ctx.fillRect(18, viewTop, 2, viewHeight);
         ctx.fillRect(CONFIG.canvasWidth - 20, viewTop, 2, viewHeight);
 
-        // Draw Earth surface
-        ctx.fillStyle = '#3a2318';
+        // Draw Earth surface (only if visible)
         const surfaceY = this.game.modeStrategy.name === 'climb' ? CONFIG.canvasHeight : 0;
-        const surfaceH = this.game.modeStrategy.name === 'climb' ? 10000 : -10000;
-        ctx.fillRect(-50, surfaceY, CONFIG.canvasWidth + 100, surfaceH);
-        ctx.fillStyle = '#00af50';
-        ctx.fillRect(-50, surfaceY, CONFIG.canvasWidth + 100, this.game.modeStrategy.name === 'climb' ? 20 : -20);
+        if (Math.abs(surfaceY - (-this.game.cameraY)) < 2000) {
+            ctx.fillStyle = '#3a2318';
+            const surfaceH = this.game.modeStrategy.name === 'climb' ? 10000 : -10000;
+            ctx.fillRect(-50, surfaceY, CONFIG.canvasWidth + 100, surfaceH);
+            ctx.fillStyle = '#00af50';
+            ctx.fillRect(-50, surfaceY, CONFIG.canvasWidth + 100, this.game.modeStrategy.name === 'climb' ? 20 : -20);
+        }
 
-        // 3. Draw Stars
+        // 3. Draw Background Theme Particles
+        const themeName = this.game.currentTheme.name;
         this.game.stars.forEach(s => {
-            s.y = (s.y + 0.2) % (this.canvas.height / scale + 1000);
-            ctx.fillStyle = `rgba(255,255,255,${s.opacity * (0.6 + 0.4 * Math.sin(time/1000 + s.x))})`;
-            ctx.fillRect(s.x, s.y - 500, s.size, s.size);
+            if (themeName === 'Space') {
+                s.y = (s.y + 0.2) % (this.canvas.height / scale + 1000);
+                ctx.fillStyle = `rgba(255,255,255,${s.opacity * (0.6 + 0.4 * Math.sin(time/1000 + s.x))})`;
+                ctx.fillRect(s.x, s.y - 500, s.size, s.size);
+            } else if (themeName === 'Rain') {
+                s.y = (s.y + 15 + s.size * 2) % (this.canvas.height / scale + 1000);
+                ctx.fillStyle = `rgba(150, 180, 255, ${s.opacity})`;
+                ctx.fillRect(s.x, s.y - 500, 2, s.size * 5 + 10);
+            } else if (themeName === 'Water') {
+                s.y = (s.y - 1 - s.size) % (this.canvas.height / scale + 1000);
+                if (s.y < -500) s.y = this.canvas.height / scale + 500; // Drift up
+                const sway = Math.sin(time/500 + s.y/100) * 2;
+                ctx.beginPath();
+                ctx.arc(s.x + sway, s.y - 500, s.size * 2, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(255, 255, 255, ${s.opacity * 0.5})`;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            } else if (themeName === 'Forest') {
+                s.y = (s.y + 1 + s.size/2) % (this.canvas.height / scale + 1000);
+                const sway = Math.sin(time/1000 + s.y/50) * 5;
+                ctx.fillStyle = `rgba(100, 255, 100, ${s.opacity * 0.4})`;
+                ctx.beginPath();
+                ctx.arc(s.x + sway, s.y - 500, s.size, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (themeName === 'Earth') {
+                s.y = (s.y + 0.5) % (this.canvas.height / scale + 1000);
+                ctx.fillStyle = `rgba(150, 100, 50, ${s.opacity * 0.6})`;
+                ctx.fillRect(s.x, s.y - 500, s.size * 1.5, s.size * 1.5);
+            }
         });
 
         // 4. Draw Platforms
         this.game.platforms.forEach(p => {
+            const w = p.bounds.max.x - p.bounds.min.x;
+            const h = p.bounds.max.y - p.bounds.min.y;
+            const isFall = this.game.modeStrategy.name === 'fall';
+
             if (p.label === 'platform') {
-                const w = p.bounds.max.x - p.bounds.min.x;
                 ctx.save();
-                if (p.isCrumbling && p.crumbleTimer > 0) {
+                if (isFall && (w > 250 || h > 40)) {
+                    // Draw as iron wall segment
+                    const grad = ctx.createLinearGradient(0, p.bounds.min.y, 0, p.bounds.max.y);
+                    grad.addColorStop(0, '#444'); grad.addColorStop(0.5, '#666'); grad.addColorStop(1, '#333');
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(p.bounds.min.x, p.bounds.min.y, w, h);
+                    ctx.strokeStyle = '#222'; ctx.lineWidth = 2;
+                    ctx.strokeRect(p.bounds.min.x, p.bounds.min.y, w, h);
+                } else if (p.isCrumbling && p.crumbleTimer > 0) {
                     const shake = Math.sin(time * 0.1) * 3;
                     ctx.translate(shake, 0);
                     ctx.filter = 'contrast(1.5) brightness(1.2)';
-                }
-                
-                if (p.isCrumbling) {
-                    ctx.fillStyle = p.crumbleTimer > 0 ? '#ffae00' : '#d2b48c';
-                    ctx.strokeStyle = '#8b4513';
-                    ctx.lineWidth = 2;
+                    ctx.fillStyle = '#ffae00';
                     this.roundRect(ctx, p.position.x - w / 2, p.position.y - 6, w, 15, 4);
                     ctx.fill();
-                    ctx.stroke();
-                    ctx.beginPath();
-                    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
-                    ctx.moveTo(p.position.x - w/4, p.position.y - 6);
-                    ctx.lineTo(p.position.x - w/5, p.position.y + 9);
-                    ctx.stroke();
                 } else {
                     ctx.drawImage(this.platformCanvas, 5, 5, 190, 15, p.position.x - w / 2, p.position.y - 6, w, 15);
                 }
                 ctx.restore();
             } else if (p.label === 'pillar') {
-                const w = p.bounds.max.x - p.bounds.min.x;
-                const h = p.bounds.max.y - p.bounds.min.y;
-                ctx.fillStyle = '#00af50';
-                ctx.strokeStyle = '#00ff88';
+                ctx.fillStyle = '#555555';
+                ctx.strokeStyle = '#888888';
                 ctx.lineWidth = 3;
                 this.roundRect(ctx, p.bounds.min.x, p.bounds.min.y, w, h, 8);
                 ctx.fill();
                 ctx.stroke();
             } else if (p.label === 'hazard' || p.label === 'oscillator') {
-                if (this.game.modeStrategy.name === 'fall') {
-                    // Iron metallic style
-                    const w = p.bounds.max.x - p.bounds.min.x;
-                    const h = 15;
-                    const grad = ctx.createLinearGradient(0, p.position.y - 6, 0, p.position.y + 9);
-                    grad.addColorStop(0, '#555');
-                    grad.addColorStop(0.5, '#aaa');
-                    grad.addColorStop(1, '#333');
+                const yTop = p.bounds.min.y;
+                const yBottom = p.bounds.max.y;
+
+                if (p.isLaser) {
+                    if (p.laserState === 'on') {
+                        const grad = ctx.createLinearGradient(0, yTop, 0, yBottom);
+                        grad.addColorStop(0, 'rgba(255, 0, 80, 0)');
+                        grad.addColorStop(0.5, 'rgba(255, 0, 80, 0.9)');
+                        grad.addColorStop(1, 'rgba(255, 0, 80, 0)');
+                        ctx.fillStyle = grad;
+                        ctx.fillRect(p.bounds.min.x, yTop - 10, w, h + 20);
+                        
+                        ctx.strokeStyle = '#ff0055'; ctx.lineWidth = 2;
+                        ctx.beginPath(); ctx.moveTo(p.bounds.min.x, p.position.y); ctx.lineTo(p.bounds.max.x, p.position.y); ctx.stroke();
+                    } else if (p.laserState === 'warning') {
+                        ctx.fillStyle = 'rgba(255, 255, 0, 0.2)';
+                        ctx.fillRect(p.bounds.min.x, yTop, w, h);
+                    }
+                    return; 
+                }
+
+                if (isFall) {
+                    const grad = ctx.createLinearGradient(0, yTop, 0, yBottom);
+                    grad.addColorStop(0, '#555'); grad.addColorStop(0.5, '#aaa'); grad.addColorStop(1, '#333');
                     ctx.fillStyle = grad;
-                    ctx.fillRect(p.bounds.min.x, p.position.y - 6, w, h);
+                    ctx.fillRect(p.bounds.min.x, yTop, w, h);
                     
-                    if (p.label === 'hazard') {
-                        // Draw mini spikes on the top/bottom
-                        ctx.fillStyle = '#222';
-                        const sSize = 10;
+                    if (p.hasSpikes) {
+                        ctx.fillStyle = '#ff0000'; // RED SPIKES
+                        const sSize = 12;
                         for (let sx = p.bounds.min.x; sx < p.bounds.max.x; sx += sSize) {
-                            ctx.beginPath();
-                            ctx.moveTo(sx, p.position.y - 6);
-                            ctx.lineTo(sx + sSize/2, p.position.y - 12);
-                            ctx.lineTo(sx + sSize, p.position.y - 6);
-                            ctx.fill();
-                            
-                            ctx.beginPath();
-                            ctx.moveTo(sx, p.position.y + 9);
-                            ctx.lineTo(sx + sSize/2, p.position.y + 15);
-                            ctx.lineTo(sx + sSize, p.position.y + 9);
-                            ctx.fill();
+                            ctx.beginPath(); ctx.moveTo(sx, yTop); ctx.lineTo(sx + sSize/2, yTop - 10); ctx.lineTo(sx + sSize, yTop); ctx.fill();
+                            ctx.beginPath(); ctx.moveTo(sx, yBottom); ctx.lineTo(sx + sSize/2, yBottom + 10); ctx.lineTo(sx + sSize, yBottom); ctx.fill();
                         }
-                    } else {
-                        // Oscillator look (rivets)
+                    } else if (p.label === 'oscillator') {
                         ctx.fillStyle = '#111';
+                        const centerY = yTop + h / 2;
                         for (let rx = p.bounds.min.x + 10; rx < p.bounds.max.x; rx += 40) {
-                            ctx.beginPath(); ctx.arc(rx, p.position.y, 3, 0, Math.PI*2); ctx.fill();
+                            ctx.beginPath(); ctx.arc(rx, centerY, 3, 0, Math.PI*2); ctx.fill();
                         }
                     }
                 } else {
                     ctx.fillStyle = p.label === 'hazard' ? '#ff2200' : '#ffff00';
-                    ctx.fillRect(p.bounds.min.x, p.position.y - 6, p.bounds.max.x - p.bounds.min.x, 15);
+                    ctx.fillRect(p.bounds.min.x, yTop, w, h);
                 }
             } else if (p.label === 'glass') {
                 ctx.fillStyle = 'rgba(150, 220, 255, 0.5)';
@@ -255,78 +299,61 @@ export class Renderer {
             ctx.restore();
         });
 
-        // 6. Draw Lava
+        // 6. Draw Lava / Spikes (Hazard boundaries)
         ctx.save();
-        ctx.beginPath();
+        const isFall = this.game.modeStrategy.name === 'fall';
         const drawLavaPos = this.game.lavaHeight;
-        const lavaExtra = this.game.modeStrategy.name === 'climb' ? 500 : -500;
-        ctx.moveTo(-100, drawLavaPos + lavaExtra);
-        ctx.lineTo(-100, drawLavaPos);
-
         const timeInS = time / 1000;
-        if (this.game.modeStrategy.name === 'climb') {
-            for (let x = -100; x <= CONFIG.canvasWidth + 200; x += 10) {
+        // scale is already declared above at line 57
+        const viewportHeight = this.canvas.height / scale;
+
+        ctx.beginPath();
+        if (isFall) {
+            // FALL MODE: Spikes at the top, filling towards top of screen
+            const screenTop = -this.game.cameraY - 100;
+            ctx.moveTo(-100, screenTop);
+            ctx.lineTo(CONFIG.canvasWidth + 100, screenTop);
+            ctx.lineTo(CONFIG.canvasWidth + 100, drawLavaPos);
+            
+            const spikeHeight = 50;
+            const spikeWidth = 40;
+            for (let x = CONFIG.canvasWidth + 100; x >= -100; x -= spikeWidth) {
+                const vx = Math.sin(timeInS * 6 + x) * 2;
+                ctx.lineTo(x - spikeWidth / 2 + vx, drawLavaPos + spikeHeight + Math.cos(timeInS * 8 + x) * 6);
+                ctx.lineTo(x - spikeWidth + vx, drawLavaPos);
+            }
+            ctx.closePath();
+            
+            const grad = ctx.createLinearGradient(0, drawLavaPos, 0, screenTop);
+            grad.addColorStop(0, '#ff0000'); // Menacing red tips
+            grad.addColorStop(0.3, '#880000');
+            grad.addColorStop(1, '#220000');
+            ctx.fillStyle = grad;
+            ctx.fill();
+        } else {
+            // CLIMB MODE: Wave/Lava at the bottom
+            const screenBottom = -this.game.cameraY + viewportHeight + 100;
+            ctx.moveTo(-100, screenBottom);
+            ctx.lineTo(CONFIG.canvasWidth + 100, screenBottom);
+            
+            for (let x = CONFIG.canvasWidth + 100; x >= -100; x -= 10) {
                 const waveY = drawLavaPos + Math.sin((x / 30) + (timeInS * 2)) * 8 + Math.cos((x / 50) - (timeInS * 1.5)) * 6;
                 ctx.lineTo(x, waveY);
             }
-        } else {
-            // High quality iron spikes
-            const spikeWidth = 40;
-            const spikeHeight = 60;
-            const grad = ctx.createLinearGradient(0, drawLavaPos, 0, drawLavaPos + 150);
-            grad.addColorStop(0, '#111');
-            grad.addColorStop(0.1, '#555');
-            grad.addColorStop(0.5, '#222');
-            ctx.fillStyle = grad;
+            ctx.closePath();
             
-            for (let x = -100; x <= CONFIG.canvasWidth + 200; x += spikeWidth) {
-                const vx = Math.sin(timeInS * 8 + x) * 3;
-                ctx.beginPath();
-                ctx.moveTo(x + vx, drawLavaPos);
-                ctx.lineTo(x + spikeWidth / 2 + vx, drawLavaPos + spikeHeight + Math.cos(timeInS * 10 + x) * 8);
-                ctx.lineTo(x + spikeWidth + vx, drawLavaPos);
-                ctx.lineTo(x + spikeWidth + vx, drawLavaPos - 500); // Fill up
-                ctx.lineTo(x + vx, drawLavaPos - 500); 
-                ctx.closePath();
-                ctx.fill();
-                
-                // Highlight edge
-                ctx.strokeStyle = '#888';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(x + vx, drawLavaPos);
-                ctx.lineTo(x + spikeWidth / 2 + vx, drawLavaPos + spikeHeight + Math.cos(timeInS * 10 + x) * 8);
-                ctx.lineTo(x + spikeWidth + vx, drawLavaPos);
-                ctx.stroke();
-            }
+            const grad = ctx.createLinearGradient(0, drawLavaPos, 0, screenBottom);
+            grad.addColorStop(0, '#ffcc00');
+            grad.addColorStop(0.2, '#ff3300');
+            grad.addColorStop(1, '#660000');
+            ctx.fillStyle = grad;
+            ctx.fill();
         }
-
-        ctx.lineTo(CONFIG.canvasWidth + 200, drawLavaPos + lavaExtra);
-        ctx.closePath();
-
-        const screenBottomRaw = -this.game.cameraY + this.canvas.height / scale;
-        const lavaTop = this.game.modeStrategy.name === 'climb' ? drawLavaPos - 10 : drawLavaPos + 10;
-        const lavaBottom = this.game.modeStrategy.name === 'climb' 
-            ? Math.max(lavaTop + 100, screenBottomRaw)
-            : Math.min(lavaTop - 100, -this.game.cameraY);
-
-        const lavaGrad = ctx.createLinearGradient(0, lavaTop, 0, lavaBottom);
-        lavaGrad.addColorStop(0, '#ffcc00');
-        lavaGrad.addColorStop(Math.min(0.2, Math.abs(100 / (lavaBottom - lavaTop + 1))), '#ff3300');
-        lavaGrad.addColorStop(1, '#660000');
-
-        ctx.fillStyle = lavaGrad;
-        ctx.fill();
-
-        ctx.strokeStyle = 'rgba(255, 100, 0, 0.8)';
-        ctx.lineWidth = 4;
-        ctx.stroke();
         ctx.restore();
 
-        // 7. Draw Player
         if (this.game.player) {
             const skin = SKINS.find(s => s.id === this.game.activeSkinId);
-            const velY = Math.abs(this.game.player.velocity.y);
+            const velY = this.game.isGameOver ? 0 : Math.abs(this.game.player.velocity.y);
             const stretch = 1 + Math.min(0.3, velY / 40);
             const squash = 1 / stretch;
 
@@ -374,7 +401,7 @@ export class Renderer {
 
             ctx.fillStyle = '#ffffff';
 
-            const eyeSpacing = 6;
+            const eyeSpacing = 8;
             const isBlinking = (time % 3500) < 150 || (velY < 0.5 && (time % 2000) < 100);
 
             if (isBlinking) {
@@ -388,26 +415,26 @@ export class Renderer {
                 ctx.stroke();
             } else {
                 ctx.beginPath();
-                ctx.arc(-eyeSpacing, -2, 5.5, 0, Math.PI * 2);
-                ctx.arc(eyeSpacing, -2, 5.5, 0, Math.PI * 2);
+                ctx.ellipse(-eyeSpacing, -2, 5, 8.5, 0, 0, Math.PI * 2);
+                ctx.ellipse(eyeSpacing, -2, 5, 8.5, 0, 0, Math.PI * 2);
                 ctx.fill();
             }
 
-            ctx.fillStyle = 'rgba(255, 100, 150, 0.6)';
-            ctx.beginPath();
-            ctx.arc(-eyeSpacing - 4, 3, 3.5, 0, Math.PI * 2);
-            ctx.arc(eyeSpacing + 4, 3, 3.5, 0, Math.PI * 2);
-            ctx.fill();
+            // Removed blush cheeks to match the second image style.
 
             ctx.strokeStyle = skin.color;
-            ctx.lineWidth = 5;
+            ctx.lineWidth = 6;
             ctx.lineCap = 'round';
 
+            const isFallingFast = this.game.modeStrategy && this.game.modeStrategy.name === 'fall' && velY > 2 && !this.game.isGameOver;
+            const armFlapY = isFallingFast ? Math.sin(time / 40) * 8 - 12 : Math.sin(time / 150) * 2;
+            const armFlapX = isFallingFast ? Math.cos(time / 40) * 3 : 0;
+
             ctx.beginPath();
-            ctx.moveTo(-16, 5);
-            ctx.lineTo(-24, 10);
-            ctx.moveTo(16, 5);
-            ctx.lineTo(24, 10);
+            ctx.moveTo(-17, 7);
+            ctx.lineTo(-26 - armFlapX, 14 + armFlapY);
+            ctx.moveTo(17, 7);
+            ctx.lineTo(26 + armFlapX, 14 + armFlapY);
             ctx.stroke();
 
             ctx.restore();
@@ -417,7 +444,7 @@ export class Renderer {
         this.game.particleSystem.render(ctx);
 
         // 9. JUICE: Speed Lines
-        if (this.game.player && Math.abs(this.game.player.velocity.y) > 15) {
+        if (this.game.player && Math.abs(this.game.player.velocity.y) > 15 && !this.game.isGameOver) {
             ctx.save();
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
             ctx.lineWidth = 1;

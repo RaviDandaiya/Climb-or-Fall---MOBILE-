@@ -16,7 +16,7 @@
  */
 
 import Matter from 'matter-js';
-import { CONFIG, THEMES, DIFFICULTY_SETTINGS, SKINS } from './constants.js';
+import { CONFIG, THEMES, DIFFICULTY_SETTINGS, SKINS, BATTLE_PASS as imports_BATTLE_PASS } from './constants.js';
 import { AudioManager } from './Audio.js';
 import { ParticleSystem } from './Particles.js';
 import { HUDManager } from './HUD.js';
@@ -69,11 +69,16 @@ class Game {
 
         // ── Progression ─────────────────────────────────────────
         this.coins = parseInt(localStorage.getItem('coins')) || 0;
-        this.ownedSkins = JSON.parse(localStorage.getItem('ownedSkins')) || ['default'];
+        this.totalCoinsAcc = parseInt(localStorage.getItem('totalCoinsAcc')) || 0;
+        this.gamesPlayed = parseInt(localStorage.getItem('gamesPlayed')) || 0;
         this.activeSkinId = localStorage.getItem('activeSkin') || 'default';
-        this.passLevel = parseInt(localStorage.getItem('passLevel')) || 1;
-        this.passXP = parseInt(localStorage.getItem('passXP')) || 0;
-        this.claimedRewards = JSON.parse(localStorage.getItem('claimedRewards')) || [];
+        
+        try {
+            this.claimedRewards = JSON.parse(localStorage.getItem('claimedRewards')) || [];
+        } catch (e) {
+            this.claimedRewards = [];
+        }
+        
         this.revivesLeft = Infinity;
         this.playerName = localStorage.getItem('playerName') || 'Survivor';
 
@@ -155,15 +160,20 @@ class Game {
                     this.timeScale = 1.0;
                 }
 
-                if (this.gameState === 'PLAYING' && this.player) {
+                if (this.gameState === 'PLAYING' && this.player && !this.isAdPlaying) {
                     Engine.update(this.engine, 16.666 * this.timeScale);
                     this.update();
                     this.createCuteTrail();
                 } else if (this.gameState === 'DEATH_ANIMATION' && this.player) {
-                    Engine.update(this.engine, 16.666 * this.timeScale);
-                    Body.setAngle(this.player, this.player.angle + 0.15 * this.timeScale);
-                    Body.applyForce(this.player, this.player.position, { x: 0, y: 0.005 * this.timeScale });
-                    if (time - this.deathTimerAnim > 1800) this.showGameOverUI();
+                    if (this.modeStrategy.name !== 'fall') {
+                        Engine.update(this.engine, 16.666 * this.timeScale);
+                        Body.setAngle(this.player, this.player.angle + 0.15 * this.timeScale);
+                        Body.applyForce(this.player, this.player.position, { x: 0, y: 0.005 * this.timeScale });
+                        if (time - this.deathTimerAnim > 1800) this.showGameOverUI();
+                    } else {
+                        // Immediately show Game Over in fall mode without delay
+                        this.showGameOverUI();
+                    }
                 }
 
                 this.renderWorldManual();
@@ -224,6 +234,7 @@ class Game {
             };
         }
 
+
         // Resize
         window.addEventListener('resize', () => this.handleResize());
     }
@@ -263,12 +274,19 @@ class Game {
         Composite.clear(this.world);
         this.engine.world.gravity.y = 1.35;
         this.cameraY = 0;
+        this._isResettingCamera = true;
         this.maxHeight = 0;
         this.currentHeight = 0;
         this.scoreBonus = 0;
         this.score = 0;
         this.combo = 1;
+        this.powerUsesThisRun = 0;
+        this.isAdPlaying = false;
         this.inputManager.reset();
+        
+        this.gamesPlayed++;
+        localStorage.setItem('gamesPlayed', this.gamesPlayed);
+        
         this.updateHUD();
 
         this.platforms = [];
@@ -300,6 +318,12 @@ class Game {
 
     update() {
         if (this.isGameOver) return;
+        
+        // Debug logging for developer (only once a second)
+        if (Math.floor(performance.now() / 1000) > (this._lastLogTime || 0)) {
+            console.log(`Game Loop: ${this.gameState}, Mode: ${this.modeStrategy.name}, PlayerY: ${this.player?.position?.y?.toFixed(1)}, Score: ${this.score}`);
+            this._lastLogTime = Math.floor(performance.now() / 1000);
+        }
 
         this.handleInput();
         this.updateStats();
@@ -329,6 +353,14 @@ class Game {
             const maxDash = this.maxDashCooldown || 120;
             const dashVal = this.dashCooldown > 0 ? this.dashCooldown : 0;
             btnPower.style.setProperty('--cd-pct', `${100 - (dashVal / maxDash) * 100}%`);
+            
+            if (this.powerUsesThisRun > 0) {
+                btnPower.innerHTML = '<span class="ads-neon">ADS</span><span style="font-size: 0.9em;">⚡</span>';
+                btnPower.classList.add('needs-ad');
+            } else {
+                btnPower.innerHTML = '⚡';
+                btnPower.classList.remove('needs-ad');
+            }
         }
         const btnJump = document.getElementById('btn-jump');
         if (btnJump) {
@@ -422,8 +454,13 @@ class Game {
             this.createCuteTrail();
         }
         if ((keys['PowerDash'] || keys['KeyE'] || keys['ShiftLeft']) && this.dashCooldown <= 0) {
-            this.modeStrategy.handleDash(this, im.vx);
             keys['PowerDash'] = false; keys['KeyE'] = false; keys['ShiftLeft'] = false;
+            if (this.powerUsesThisRun === 0) {
+                this.powerUsesThisRun++;
+                this.modeStrategy.handleDash(this, im.vx);
+            } else {
+                this.adManager.startPowerAd();
+            }
         }
 
         // Apply velocity
@@ -443,7 +480,6 @@ class Game {
         // Jump
         if (keys['TouchJump'] || keys['Space'] || keys['ArrowUp']) {
             this.modeStrategy.handleJump(this, onGround, jumpForce);
-            keys['TouchJump'] = false; keys['Space'] = false; keys['ArrowUp'] = false;
         }
     }
 
@@ -506,7 +542,7 @@ class Game {
 
     collectCoin(coin) {
         this.coins += 5;
-        this.addXP(20);
+        this.totalCoinsAcc += 5;
         this.updateHUD();
         this.createParticles(coin.position, '#ffcc00', 8);
         World.remove(this.world, coin);
@@ -514,6 +550,7 @@ class Game {
         if (idx > -1) this.activeCoins.splice(idx, 1);
         this.pool.coin.push(coin);
         localStorage.setItem('coins', this.coins);
+        localStorage.setItem('totalCoinsAcc', this.totalCoinsAcc);
         this.playCoin();
     }
 
@@ -546,14 +583,18 @@ class Game {
 
     updateStats() {
         const startY = this.modeStrategy.getPlayerStartY();
-        const rawH = Math.abs(startY - this.player.position.y) / 10;
+        let rawH = 0;
+        if (this.modeStrategy.name === 'fall') {
+            rawH = (this.player.position.y - startY) / 10;
+        } else {
+            rawH = (startY - this.player.position.y) / 10;
+        }
         const h = rawH < 2 ? 0 : Math.floor(rawH);
         this.currentHeight = h;
         this.score = this.currentHeight + this.scoreBonus;
 
         if (this.score > this.maxHeight) {
             this.maxHeight = this.score;
-            if (this.maxHeight % 10 === 0) this.addXP(1);
             const newStage = Math.floor(this.maxHeight / 150);
             if (newStage > this.stage) { this.stage = newStage; this.levelUpTwist(this.stage); }
         }
@@ -563,17 +604,7 @@ class Game {
     addScoreBonus(amt) { this.scoreBonus += amt; }
 
     addXP(amt) {
-        this.passXP += amt;
-        if (this.passXP >= 1000) {
-            this.passXP = 0;
-            this.passLevel++;
-            this.showLevelUpToast(this.passLevel);
-            this.playLevelUp();
-        }
-        localStorage.setItem('passXP', this.passXP);
-        localStorage.setItem('passLevel', this.passLevel);
-        this.updateHUD();
-        this.renderPass();
+        // Redundant with new task-based progression
     }
 
     updateWorld() {
@@ -604,7 +635,11 @@ class Game {
 
         if (this.player) {
             this.player.collisionFilter = { group: -1, category: 0, mask: 0 };
-            Body.setVelocity(this.player, { x: (Math.random() - 0.5) * 10, y: -15 });
+            if (this.modeStrategy.name === 'fall') {
+                Body.setVelocity(this.player, { x: (Math.random() - 0.5) * 5, y: -2 });
+            } else {
+                Body.setVelocity(this.player, { x: (Math.random() - 0.5) * 10, y: -15 });
+            }
             this.createExplosion(this.player.position, '#ffffff', 20);
             this.createExplosion(this.player.position, '#ff2200', 30);
         }
@@ -678,6 +713,14 @@ class Game {
         this.player.collisionFilter = { group: 0, category: 1, mask: 0xFFFFFFFF };
         this.lavaHeight = this.modeStrategy.getReviveLavaHeight(ry);
 
+        // Clear all old entities so new ones can spawn ahead
+        [this.platforms, this.enemies, this.activeCoins, this.powerups].forEach(arr => {
+            arr.forEach(item => {
+                if(item.label !== 'wall' && item.label !== 'floor') World.remove(this.world, item);
+            });
+            arr.length = 0;
+        });
+
         const s = Bodies.rectangle(rx, ry + 30, 250, 20, { isStatic: true, label: 'platform' });
         World.add(this.world, s);
         this.platforms.push(s);
@@ -694,20 +737,19 @@ class Game {
 
     claimReward(level) {
         if (this.claimedRewards.includes(level)) return;
-        if (level % 2 === 0) {
-            if (!this.ownedSkins.includes('xmas')) {
-                this.ownedSkins.push('xmas');
-                localStorage.setItem('ownedSkins', JSON.stringify(this.ownedSkins));
-            }
-        } else {
-            this.coins += 100;
+        
+        // Find reward in BATTLE_PASS
+        const passItem = imports_BATTLE_PASS.find(p => p.id === level);
+        if(passItem && passItem.isUnlocked(this)) {
+            this.coins += passItem.rewardAmount;
             localStorage.setItem('coins', this.coins);
+            this.claimedRewards.push(level);
+            localStorage.setItem('claimedRewards', JSON.stringify(this.claimedRewards));
+            this.updateHUD();
+            this.renderPass();
+            this.renderSkins();
+            this._playTone(880, 'square', 0, 0.2);
         }
-        this.claimedRewards.push(level);
-        localStorage.setItem('claimedRewards', JSON.stringify(this.claimedRewards));
-        this.updateHUD();
-        this.renderPass();
-        this.renderSkins();
     }
 
     // ════════════════════════════════════════════════════════════

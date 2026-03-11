@@ -24,11 +24,11 @@ export class FallMode {
     }
 
     getLavaStartHeight() {
-        return -800; // Start spikes far behind
+        return -1400; // Even further behind for compatibility
     }
 
     getPlayerStartY() {
-        return 150;
+        return 180; // Slightly lower to clear any ceiling effects
     }
 
     getFloorY() {
@@ -36,8 +36,8 @@ export class FallMode {
     }
 
     getInitialPlatformY(index, settings) {
-        // Reduced initial spacing because vertical speeds are drastically slower
-        return 500 + (index * 400);
+        // Position first obstacle further (550)
+        return 550 + (index * 550);
     }
 
     getPlatformParams(index, settings) {
@@ -80,22 +80,26 @@ export class FallMode {
         const gapX = 100 + Math.random() * (CONFIG.canvasWidth - 200);
 
         // 3. Spawn Obstacle
-        if (pattern === 'small_rock')           this.createRock(y, gapX, 1, game);
-        else if (pattern === 'medium_rock')     this.createRock(y, gapX, 2, game);
-        else if (pattern === 'large_platform')  this.createRock(y, gapX, 3.5, game);
-        else if (pattern === 'small_monster')   this.createMonster(y, 1, game);
-        else if (pattern === 'monster_cluster') this.createMonster(y, 3, game);
-        else if (pattern === 'blades')          this.createRotatingBlades(y, game, obstacleScale);
-        else if (pattern === 'small_crusher')   this.createMovingCrusher(y, game, 0.4, gapSize); 
-        else if (pattern === 'crushers')        this.createMovingCrusher(y, game, 1.0, gapSize);
-        else if (pattern === 'walls')           this.createWallSegment(y, gapX, gapSize, game, false);
-        else if (pattern === 'complex_walls')   this.createWallSegment(y, gapX, gapSize * 0.8, game, true);
-        else if (pattern === 'lasers')          this.createLaserGate(y, game);
+        const isSafeZone = index < 8; // Increased safe zone (was 3)
+        if (isSafeZone) {
+            this.createRock(y, gapX, 1.2, game); // Smaller rocks initially
+        } else {
+            if (pattern === 'small_rock')           this.createRock(y, gapX, 1, game);
+            else if (pattern === 'medium_rock')     this.createRock(y, gapX, 2, game);
+            else if (pattern === 'large_platform')  this.createRock(y, gapX, 3.5, game);
+            else if (pattern === 'small_monster')   this.createMonster(y, 1, game);
+            else if (pattern === 'monster_cluster') this.createMonster(y, 3, game);
+            else if (pattern === 'blades')          this.createRotatingBlades(y, game, obstacleScale);
+            else if (pattern === 'small_crusher')   this.createMovingCrusher(y, game, 0.4, gapSize); 
+            else if (pattern === 'crushers')        this.createMovingCrusher(y, game, 1.0, gapSize);
+            else if (pattern === 'walls')           this.createWallSegment(y, gapX, gapSize, game, false);
+            else if (pattern === 'complex_walls')   this.createWallSegment(y, gapX, gapSize * 0.8, game, true);
+            else if (pattern === 'lasers')          this.createLaserGate(y, game);
+        }
 
         // 4. Coin Spawning in Safe Gaps
         if (Math.random() < 0.7) {
-            game.addCoin(gapX + (Math.random() - 0.5) * gapSize * 0.5, y - 80);
-            if (stage > 1 && Math.random() < 0.3) game.addCoin(gapX, y - 120);
+            game.worldManager.addCoin(gapX + (Math.random() - 0.5) * gapSize * 0.5, y - 80);
         }
         
         return true; 
@@ -120,7 +124,8 @@ export class FallMode {
             rock = Bodies.rectangle(clampedX, y, w, h, { isStatic: true });
             World.add(game.world, rock);
         }
-        rock.label = 'hazard';
+        rock.label = 'platform'; // Changed from 'hazard' to make it safe wall
+        rock.hasSpikes = false;
         game.platforms.push(rock);
     }
 
@@ -147,27 +152,34 @@ export class FallMode {
         const rightWidth = Math.max(10, CONFIG.canvasWidth - (gapX + gapSize / 2));
         const h = isComplex ? 120 : 60;
 
+        const leftSpikes = false;
+        const rightSpikes = false;
+
         let leftWall = game.pool.platform.pop() || Bodies.rectangle(leftWidth / 2, y, leftWidth, h, { isStatic: true });
         Body.setPosition(leftWall, {x: leftWidth/2, y});
         const lwScale = leftWidth / (leftWall.bounds.max.x - leftWall.bounds.min.x);
         Body.scale(leftWall, lwScale, 1);
-        leftWall.label = 'hazard';
+        leftWall.label = leftSpikes ? 'hazard' : 'platform';
+        leftWall.hasSpikes = leftSpikes;
 
         let rightWall = game.pool.platform.pop() || Bodies.rectangle(CONFIG.canvasWidth - rightWidth / 2, y, rightWidth, h, { isStatic: true });
         Body.setPosition(rightWall, {x: CONFIG.canvasWidth - rightWidth/2, y});
         const rwScale = rightWidth / (rightWall.bounds.max.x - rightWall.bounds.min.x);
         Body.scale(rightWall, rwScale, 1);
-        rightWall.label = 'hazard';
+        rightWall.label = rightSpikes ? 'hazard' : 'platform';
+        rightWall.hasSpikes = rightSpikes;
 
         World.add(game.world, [leftWall, rightWall]);
         game.platforms.push(leftWall, rightWall);
 
         if (isComplex && Math.random() < 0.5 && gapSize > 150) {
+            const islandSpikes = Math.random() < 0.5;
             let island = game.pool.platform.pop() || Bodies.rectangle(gapX, y, 40, h / 2, { isStatic: true });
             Body.setPosition(island, {x: gapX, y});
             const iScale = 40 / (island.bounds.max.x - island.bounds.min.x);
             Body.scale(island, iScale, 1);
-            island.label = 'hazard';
+            island.label = 'platform';
+            island.hasSpikes = false;
             World.add(game.world, island);
             game.platforms.push(island);
         }
@@ -227,20 +239,29 @@ export class FallMode {
         gate.isLaser = true;
         gate.laserTimer = 0;
         gate.laserState = 'off';
+        gate.render = { visible: false }; // Handled by Renderer
         
         World.add(game.world, gate);
         game.platforms.push(gate);
     }
 
     updateLava(mult) {
-        const targetSpeed = this.currentWorldVel * 0.95;
+        if (this.game.isGameOver || !this.game.player) return;
+        
+        // Lava/Spikes follow from above
+        const targetSpeed = Math.max(0.2, this.currentWorldVel * 0.96);
         this.game.lavaHeight += targetSpeed;
 
+        // More forgiving catch-up logic
         const distToPlayer = this.game.player.position.y - this.game.lavaHeight;
-        if (distToPlayer > 1200) {
-            this.game.lavaHeight += 4;
+        const graceDist = this.timeSurvived < 10 ? 2500 : 1600;
+        
+        if (distToPlayer > graceDist) {
+            const catchupSpeed = this.timeSurvived < 10 ? 1 : 4.5;
+            this.game.lavaHeight += catchupSpeed;
         }
 
+        // Death condition: Spikes (above) catch up to player
         if (this.game.player.position.y < this.game.lavaHeight) {
             this.game.triggerDeath("IMPALED BY SPIKES");
         }
@@ -270,15 +291,15 @@ export class FallMode {
         const stage = this.getDifficultyStage();
         let lastY = platforms.length ? platforms.reduce((m, p) => Math.max(m, p.position.y), 0) : playerY;
         
-        // Target closer vertical spawn intervals since the player is falling much slower
-        const baseSpawnInterval = 600;
-        const reductionRate = 100;
-        const minSpawnInterval = 250;
+        const baseSpawnInterval = 650;
+        const reductionRate = 120;
+        const minSpawnInterval = 300;
         
         const currentInterval = Math.max(minSpawnInterval, baseSpawnInterval - stage * reductionRate);
 
-        if (playerY > lastY - 1500) {
-            return lastY + currentInterval + (Math.random() * 100);
+        // Keep 2000 units of obstacles ahead of the player
+        if (playerY > lastY - 2000) {
+            return lastY + currentInterval + (Math.random() * 80);
         }
         return null;
     }
@@ -305,13 +326,19 @@ export class FallMode {
     
     updateFallMechanics(game) {
         if (game.isGameOver) {
-            this.startTime = null;
+            this.startTime = null; // Reset startTime so it re-initializes on next run
             return;
         }
         
         // 1. Calculate time survived for difficulty scaling
-        if (!this.startTime) this.startTime = performance.now();
-        this.timeSurvived = (performance.now() - this.startTime) / 1000;
+        const now = performance.now();
+        if (!this.startTime) {
+            this.startTime = now;
+            return; // Skip first frame to get valid delta
+        }
+        
+        this.timeSurvived += (now - this.startTime) / 1000;
+        this.startTime = now;
         
         const stage = this.getDifficultyStage();
         
@@ -332,16 +359,21 @@ export class FallMode {
         }
         
         this.currentWorldVel = targetSpeed;
+        
+        // 2.5: Compatibility: Ensure lava doesn't jump too close on start
+        if (this.timeSurvived < 5 && this.game.lavaHeight < -1000) {
+             // Keep it back during initial drop
+        }
 
         // Clamp maximum falling speed to prevent impossible gameplay
-        if (game.player.velocity.y > 7.0) {
-            Body.setVelocity(game.player, { x: game.player.velocity.x, y: 7.0 });
+        if (game.player.velocity.y > 10.0) {
+            Body.setVelocity(game.player, { x: game.player.velocity.x, y: 10.0 });
         }
         
-        // Ensure the player is always falling at least as fast as the world 
-        // to prevent them getting stuck above the screen viewport
-        if (game.player.velocity.y < this.currentWorldVel * 0.4 && this.brakeTimer <= 0) {
-             Body.setVelocity(game.player, { x: game.player.velocity.x, y: this.currentWorldVel * 0.4 });
+        // Ensure the player is always falling slightly faster than the world speed ramp 
+        // unless they are actively braking.
+        if (game.player.velocity.y < this.currentWorldVel + 1.5 && this.brakeTimer <= 0) {
+             Body.setVelocity(game.player, { x: game.player.velocity.x, y: this.currentWorldVel + 1.5 });
         }
 
         // 3. Update active obstacles
