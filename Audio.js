@@ -36,4 +36,8 @@ export class AudioManager {
     playLevelUp() { this._playTone(720, 'triangle', 0, 0.18); this._playTone(980, 'sine', 0.05, 0.12); }
     playGameOver() { this._playTone(120, 'sine', 0, 0.4); }
     playFall() { this._playTone(300, 'sawtooth', 0, 0.5); }
+    playShield() { this._playTone(640, 'triangle', 0, 0.18); this._playTone(960, 'sine', 0.08, 0.14); }
+    playMagnet() { this._playTone(420, 'sawtooth', 0, 0.16); this._playTone(220, 'sine', 0.05, 0.25); }
+    playPowerPickup() { this._playTone(880, 'square', 0, 0.12); this._playTone(1320, 'sine', 0.06, 0.1); }
+    playLavaWarning() { this._playTone(320, 'sawtooth', 0, 0.25); this._playTone(180, 'sine', 0.12, 0.25); }
 }

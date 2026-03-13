@@ -84,6 +84,7 @@ export class InputManager {
         const btnTilt = document.getElementById('btn-tilt-mode');
         const leftGroup = document.querySelector('.control-group.left');
         const rightGroup = document.querySelector('.control-group.right');
+        const btnJump = document.getElementById('btn-jump');
 
         if (!btnTouch || !btnTilt) return;
 
@@ -91,7 +92,8 @@ export class InputManager {
             btnTouch.classList.remove('active');
             btnTilt.classList.add('active');
             if (leftGroup) leftGroup.style.display = 'none';
-            if (rightGroup) rightGroup.style.display = 'none';
+            if (rightGroup) rightGroup.style.display = 'flex'; // Keep power/jump visible for tilt
+            if (btnJump) btnJump.style.display = 'none';
         }
 
         btnTouch.onclick = () => {
@@ -101,6 +103,7 @@ export class InputManager {
             btnTilt.classList.remove('active');
             if (leftGroup) leftGroup.style.display = 'flex';
             if (rightGroup) rightGroup.style.display = 'flex';
+            if (btnJump) btnJump.style.display = 'inline-flex';
         };
 
         btnTilt.onclick = async () => {
@@ -112,7 +115,8 @@ export class InputManager {
             btnTilt.classList.add('active');
             btnTouch.classList.remove('active');
             if (leftGroup) leftGroup.style.display = 'none';
-            if (rightGroup) rightGroup.style.display = 'none';
+            if (rightGroup) rightGroup.style.display = 'flex'; // Keep power/jump visible
+            if (btnJump) btnJump.style.display = 'none';
         };
     }
 
@@ -139,6 +143,10 @@ export class InputManager {
             if(hardDesc) hardDesc.innerText = "Pure agony";
         };
         const handleFall = (e) => {
+            if (btnFall.disabled || btnFall.classList.contains('disabled')) {
+                if (e) e.preventDefault();
+                return;
+            }
             if (e) e.preventDefault();
             game.gameMode = 'fall';
             game.modeStrategy = new FallMode(game);

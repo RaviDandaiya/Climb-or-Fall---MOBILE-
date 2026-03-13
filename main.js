@@ -98,6 +98,7 @@ class Game {
         this.hasShield = false;
         this.magnetTimer = 0;
         this.powerups = [];
+        this._lavaWarned = false;
 
         // ── Dash / Ability State ────────────────────────────────
         this.dashCooldown = 0;
@@ -328,6 +329,7 @@ class Game {
         this.handleInput();
         this.updateStats();
         this.updateWorld();
+        this.checkLavaProximity();
         this.worldManager.updatePlatforms();
         this.worldManager.updateEnemies();
         this.checkCollisions();
@@ -388,6 +390,17 @@ class Game {
                 }
             }
         });
+    }
+
+    checkLavaProximity() {
+        if (!this.player) return;
+        const distance = this.lavaHeight - this.player.position.y;
+        if (distance < 450 && !this._lavaWarned) {
+            this._lavaWarned = true;
+            this.playLavaWarning();
+        } else if (distance > 650 && this._lavaWarned) {
+            this._lavaWarned = false;
+        }
     }
 
     updateWalls() {
@@ -558,17 +571,19 @@ class Game {
         if (p.powerupType === 'shield') {
             this.hasShield = true;
             this.createExplosion(p.position, '#00d1ff', 20);
+            this.playShield();
         } else if (p.powerupType === 'magnet') {
             this.magnetTimer = 600;
             this.createExplosion(p.position, '#ff3e3e', 20);
+            this.playMagnet();
         } else if (p.powerupType === 'anchor') {
             this.anchorTimer = 300;
             this.createExplosion(p.position, '#444444', 30);
+            this.playPowerPickup();
         }
         World.remove(this.world, p);
         this.powerups = this.powerups.filter(item => item !== p);
         this.pool.powerup.push(p);
-        this._playTone(880, 'sine', 0, 0.15);
     }
 
     consumeShield() {
@@ -614,9 +629,24 @@ class Game {
     }
 
     levelUpTwist(stage) {
-        this.currentTheme = THEMES[stage % THEMES.length];
+        const nextTheme = THEMES[stage % THEMES.length];
+        this._animateThemeTransition(this.currentTheme, nextTheme);
+        this.currentTheme = nextTheme;
         this.lavaSpeed += 0.05;
         this.playLevelUp();
+    }
+
+    _animateThemeTransition(fromTheme, toTheme) {
+        try {
+            const root = document.documentElement;
+            root.style.setProperty('--theme-from-bg1', fromTheme?.bg?.[0] || '#0c0c12');
+            root.style.setProperty('--theme-from-bg2', fromTheme?.bg?.[1] || '#0c0f18');
+            root.style.setProperty('--theme-to-bg1', toTheme?.bg?.[0] || '#0c0c12');
+            root.style.setProperty('--theme-to-bg2', toTheme?.bg?.[1] || '#0c0f18');
+            root.classList.remove('theme-transition');
+            void root.offsetWidth; // force reflow
+            root.classList.add('theme-transition');
+        } catch (_) {}
     }
 
     // ════════════════════════════════════════════════════════════
@@ -777,6 +807,10 @@ class Game {
     playLevelUp() { this.audioManager.playLevelUp(); }
     playGameOver() { this.audioManager.playGameOver(); }
     playFall() { this.audioManager.playFall(); }
+    playShield() { this.audioManager.playShield(); }
+    playMagnet() { this.audioManager.playMagnet(); }
+    playPowerPickup() { this.audioManager.playPowerPickup(); }
+    playLavaWarning() { this.audioManager.playLavaWarning(); }
 
     saveScore(score) { console.log('Score saved locally:', score); }
 }
