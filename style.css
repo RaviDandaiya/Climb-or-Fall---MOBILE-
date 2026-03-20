@@ -265,6 +265,9 @@ body {
   z-index: 1000;
   transition: opacity 0.4s;
   pointer-events: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   /* Required for scrolling child elements */
 }
 
