@@ -670,6 +670,7 @@ body {
   position: relative;
   width: 100%;
   min-height: 100vh;
+  padding-bottom: 140px;
 }
 
 #difficulty-screen .menu-logo-container {
@@ -829,7 +830,7 @@ body {
 .screen-content {
   width: 100%;
   max-width: 520px;
-  margin: 0 auto 80px;
+  margin: 0 auto 140px;
   display: flex;
   flex-direction: column;
   align-items: center;
