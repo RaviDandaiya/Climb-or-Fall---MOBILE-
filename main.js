@@ -187,6 +187,7 @@ class Game {
             try { this.audioManager = new AudioManager(); } catch (err) { console.warn('audio init fail', err); }
 
             this.showMenu();
+            document.body.classList.add('menu-open');
         } catch (e) {
             console.error('Initialization Error:', e);
             document.getElementById('difficulty-screen').classList.remove('hidden');
@@ -267,6 +268,7 @@ class Game {
         document.getElementById('death-screen').classList.add('hidden');
         document.getElementById('difficulty-screen').classList.remove('hidden');
         this.hud.updateHUD();
+        document.body.classList.add('menu-open');
     }
     updateHUD() { this.hud.updateHUD(); }
     renderSkins() { this.hud.renderSkins(); }
@@ -287,6 +289,7 @@ class Game {
         this.revivesLeft = 2;
         document.getElementById('difficulty-screen').classList.add('hidden');
         window.focus();
+        document.body.classList.remove('menu-open');
 
         Composite.clear(this.world);
         this.engine.world.gravity.y = 1.35;
