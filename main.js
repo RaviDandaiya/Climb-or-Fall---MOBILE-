@@ -92,6 +92,7 @@ class Game {
         this.lavaHeight = CONFIG.canvasHeight + 1000;
         this.isClimbing = false;
         this.controlMode = localStorage.getItem('controlMode') || 'touch';
+        this.sensitivity = parseFloat(localStorage.getItem('sensitivity') || '1');
         this.gameMode = 'climb';
 
         // ── Powerups ────────────────────────────────────────────
@@ -232,6 +233,21 @@ class Game {
                 this.playerName = e.target.value || 'Survivor';
                 localStorage.setItem('playerName', this.playerName);
                 this.updateHUD();
+            };
+        }
+
+        // Sensitivity slider
+        const sensSlider = document.getElementById('sensitivity-slider');
+        const sensValue = document.getElementById('sensitivity-value');
+        const updateSensLabel = (val) => { if (sensValue) sensValue.innerText = `${Math.round(val * 100)}%`; };
+        if (sensSlider) {
+            sensSlider.value = this.sensitivity;
+            updateSensLabel(this.sensitivity);
+            sensSlider.oninput = (e) => {
+                const val = parseFloat(e.target.value);
+                this.sensitivity = isNaN(val) ? 1 : val;
+                localStorage.setItem('sensitivity', this.sensitivity);
+                updateSensLabel(this.sensitivity);
             };
         }
 
@@ -430,8 +446,8 @@ class Game {
         if (this.isGameOver || !this.player) return;
         const keys = this.inputManager.keys;
         const vel = this.player.velocity;
-        const baseSpeed = CONFIG.moveSpeed;
-        const jumpForce = CONFIG.jumpForce * (this.isClimbing ? 0.7 : 1);
+        const baseSpeed = CONFIG.moveSpeed * this.sensitivity;
+        const jumpForce = CONFIG.jumpForce * (this.isClimbing ? 0.7 : 1) * this.sensitivity;
 
         const onGround = [-15, 0, 15].some(off =>
             Matter.Query.ray(
@@ -443,7 +459,7 @@ class Game {
 
         // Smooth horizontal movement
         const im = this.inputManager;
-        const accel = 0.8;
+        const accel = 0.8 * this.sensitivity;
         const friction = 0.85;
 
         if (keys['ArrowLeft'] || keys['KeyA']) {
