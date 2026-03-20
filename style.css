@@ -43,6 +43,10 @@ body {
   -webkit-user-select: none;
 }
 
+body.menu-open {
+  overflow-y: auto;
+}
+
 #game-container {
   position: fixed;
   inset: 0;
@@ -50,6 +54,13 @@ body {
   height: 100%;
   overflow: hidden;
   background: linear-gradient(180deg, var(--theme-from-bg1) 0%, var(--theme-from-bg2) 40%, #0c0a0d 100%);
+}
+
+body.menu-open #game-container {
+  position: relative;
+  height: auto;
+  min-height: 100vh;
+  overflow: visible;
 }
 
 #game-container::before {
@@ -838,8 +849,12 @@ body {
 }
 
 body.menu-open #game-canvas {
-  opacity: 0;
-  pointer-events: none;
+  display: none;
+}
+
+body.menu-open .screen-overlay {
+  position: relative;
+  inset: auto;
 }
 
 @keyframes fadeInUp {
