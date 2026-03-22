@@ -682,7 +682,7 @@ body.menu-open #game-container {
   position: relative;
   width: 100%;
   min-height: 100vh;
-  padding-bottom: 140px;
+  padding-bottom: 80px;
 }
 
 #difficulty-screen .menu-logo-container {
@@ -853,7 +853,7 @@ body.menu-open #game-container {
 .screen-content {
   width: 100%;
   max-width: 520px;
-  margin: 0 auto 140px;
+  margin: 0 auto 60px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1736,12 +1736,12 @@ body.menu-open .screen-overlay {
 
 /* --- Legal Links Additions --- */
 .legal-links {
-  margin-top: 30px;
+  margin-top: 14px;
   display: flex;
   gap: 15px;
   justify-content: center;
   align-items: center;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   opacity: 0.7;
 }
 
