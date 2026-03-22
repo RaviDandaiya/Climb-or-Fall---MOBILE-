@@ -850,6 +850,17 @@ body.menu-open #game-container {
   margin-bottom: 32px;
 }
 
+@media (max-width: 520px) {
+  .menu-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+  .menu-btn {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
 .screen-content {
   width: 100%;
   max-width: 520px;

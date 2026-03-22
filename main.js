@@ -763,10 +763,20 @@ class Game {
         this.lavaHeight = this.modeStrategy.getReviveLavaHeight(ry);
 
         // Clear all old entities so new ones can spawn ahead
-        [this.platforms, this.enemies, this.activeCoins, this.powerups].forEach(arr => {
-            arr.forEach(item => {
-                if(item.label !== 'wall' && item.label !== 'floor') World.remove(this.world, item);
-            });
+        const keptPlatforms = [];
+        this.platforms.forEach(item => {
+            if (item.label === 'pillar') {
+                keptPlatforms.push(item);
+                return;
+            }
+            if (item.label !== 'wall' && item.label !== 'floor') {
+                World.remove(this.world, item);
+            }
+        });
+        this.platforms = keptPlatforms;
+
+        [this.enemies, this.activeCoins, this.powerups].forEach(arr => {
+            arr.forEach(item => { World.remove(this.world, item); });
             arr.length = 0;
         });
 
