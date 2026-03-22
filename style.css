@@ -873,6 +873,11 @@ body.menu-open .screen-overlay {
   overflow: visible;
 }
 
+#death-screen.screen-overlay {
+  justify-content: center;
+  align-items: center;
+}
+
 @keyframes fadeInUp {
   from { transform: translateY(30px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
