@@ -45,6 +45,7 @@ body {
 
 body.menu-open {
   overflow-y: auto;
+  touch-action: pan-y;
 }
 
 #game-container {
@@ -855,6 +856,7 @@ body.menu-open #game-canvas {
 body.menu-open .screen-overlay {
   position: relative;
   inset: auto;
+  overflow: visible;
 }
 
 @keyframes fadeInUp {
