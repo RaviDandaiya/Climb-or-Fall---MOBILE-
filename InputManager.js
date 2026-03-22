@@ -33,6 +33,7 @@ export class InputManager {
                 this.keys[key] = true;
                 btn.classList.add('active');
                 try { if (game.audioManager?.audio?.state === 'suspended') game.audioManager.audio.resume(); } catch (_) {}
+                try { game.playUI(); } catch (_) {}
             };
             const up = (e) => {
                 e.preventDefault();

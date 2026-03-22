@@ -144,6 +144,7 @@ class Game {
             this.inputManager.setup();
             this.renderSkins();
             this.renderPass();
+            this._bindAudioUnlock();
 
             this.world.gravity.y = 1.35;
             this.ctx = this.canvas.getContext('2d', { alpha: false });
@@ -199,8 +200,10 @@ class Game {
     // ════════════════════════════════════════════════════════════
 
     setupUIListeners() {
+        const uiClick = () => { this.resumeAudio(); this.playUI(); };
         // Retry
         document.getElementById('retry-button').onclick = () => {
+            uiClick();
             document.getElementById('death-screen').classList.add('hidden');
             document.getElementById('retry-button').style.transform = '';
             document.getElementById('death-screen').style.opacity = '1';
@@ -209,22 +212,22 @@ class Game {
 
         // Home
         const homeBtn = document.getElementById('home-button');
-        if (homeBtn) homeBtn.onclick = () => this.showMainMenu();
+        if (homeBtn) homeBtn.onclick = () => { uiClick(); this.showMainMenu(); };
 
         // Difficulty
         document.querySelectorAll('.menu-btn').forEach(btn => {
-            btn.onclick = () => this.startGame(btn.dataset.difficulty);
+            btn.onclick = () => { uiClick(); this.startGame(btn.dataset.difficulty); };
         });
 
         // Shop / Pass / Close
-        document.getElementById('btn-shop').onclick = () => document.getElementById('shop-screen').classList.remove('hidden');
-        document.getElementById('btn-pass').onclick = () => document.getElementById('pass-screen').classList.remove('hidden');
+        document.getElementById('btn-shop').onclick = () => { uiClick(); document.getElementById('shop-screen').classList.remove('hidden'); };
+        document.getElementById('btn-pass').onclick = () => { uiClick(); document.getElementById('pass-screen').classList.remove('hidden'); };
         document.querySelectorAll('.close-btn').forEach(btn => {
-            btn.onclick = () => btn.parentElement.classList.add('hidden');
+            btn.onclick = () => { uiClick(); btn.parentElement.classList.add('hidden'); };
         });
 
         // Ad revive
-        document.getElementById('ad-revive-btn').onclick = () => this.adManager.startRevive();
+        document.getElementById('ad-revive-btn').onclick = () => { uiClick(); this.adManager.startRevive(); };
 
         // Player name
         const nameInput = document.getElementById('player-name-input');
@@ -289,6 +292,7 @@ class Game {
         this.revivesLeft = 2;
         document.getElementById('difficulty-screen').classList.add('hidden');
         window.focus();
+        this.playStart();
         document.body.classList.remove('menu-open');
 
         Composite.clear(this.world);
@@ -743,6 +747,7 @@ class Game {
         this.revivesLeft--;
         document.getElementById('death-screen').classList.add('hidden');
         this.revive();
+        this.playRevive();
     }
 
     revive() {
@@ -840,6 +845,20 @@ class Game {
     playMagnet() { this.audioManager.playMagnet(); }
     playPowerPickup() { this.audioManager.playPowerPickup(); }
     playLavaWarning() { this.audioManager.playLavaWarning(); }
+    playUI() { this.audioManager.playUI(); }
+    playStart() { this.audioManager.playStart(); }
+    playRevive() { this.audioManager.playRevive(); }
+    resumeAudio() { this.audioManager.resume(); }
+
+    _bindAudioUnlock() {
+        const unlock = () => {
+            this.resumeAudio();
+            window.removeEventListener('pointerdown', unlock);
+            window.removeEventListener('keydown', unlock);
+        };
+        window.addEventListener('pointerdown', unlock, { once: true });
+        window.addEventListener('keydown', unlock, { once: true });
+    }
 
     saveScore(score) { console.log('Score saved locally:', score); }
 }
