@@ -79,6 +79,9 @@ export class Renderer {
         }
         ctx.translate(0, this.game.cameraY || 0);
 
+        // Draw Side Walls (Pillar Walls) - logical width 600
+        this.drawSideWalls(ctx);
+
         // Apply Juice: Screen Shake
         if (this.game.shake > 0.5) {
             const sx = (Math.random() - 0.5) * this.game.shake;
@@ -352,9 +355,6 @@ export class Renderer {
         }
         ctx.restore();
 
-        // Draw Side Walls (Pillar Walls)
-        this.drawSideWalls(ctx);
-
         if (this.game.player) {
             const skin = SKINS.find(s => s.id === this.game.activeSkinId);
             const velY = this.game.isGameOver ? 0 : Math.abs(this.game.player.velocity.y);
@@ -550,24 +550,32 @@ export class Renderer {
     }
 
     drawSideWalls(ctx) {
-        // Draw Side Walls (Pillar Walls)
+        // Draw Side Walls (Pillar Walls) - use logical width 600
         const wallWidth = 15;
+        const viewTop = -this.game.cameraY;
+        const scale = (this.canvas.width / CONFIG.canvasWidth) || 1;
+        const viewHeight = this.canvas.height / scale;
+        
+        // Left Wall
+        ctx.save();
         const grad = ctx.createLinearGradient(0, 0, wallWidth, 0);
-        grad.addColorStop(0, '#222'); grad.addColorStop(0.5, '#555'); grad.addColorStop(1, '#111');
-        
+        grad.addColorStop(0, '#222'); grad.addColorStop(0.5, '#444'); grad.addColorStop(1, '#111');
         ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, wallWidth, this.canvas.height);
+        ctx.fillRect(0, viewTop, wallWidth, viewHeight);
         
-        const gradRight = ctx.createLinearGradient(this.canvas.width - wallWidth, 0, this.canvas.width, 0);
-        gradRight.addColorStop(0, '#111'); gradRight.addColorStop(0.5, '#555'); gradRight.addColorStop(1, '#222');
+        // Right Wall
+        const gradRight = ctx.createLinearGradient(CONFIG.canvasWidth - wallWidth, 0, CONFIG.canvasWidth, 0);
+        gradRight.addColorStop(0, '#111'); gradRight.addColorStop(0.5, '#444'); gradRight.addColorStop(1, '#222');
         ctx.fillStyle = gradRight;
-        ctx.fillRect(this.canvas.width - wallWidth, 0, wallWidth, this.canvas.height);
+        ctx.fillRect(CONFIG.canvasWidth - wallWidth, viewTop, wallWidth, viewHeight);
 
         // Add some metallic rivets to the walls
-        ctx.fillStyle = '#888';
-        for (let y = 0; y < this.canvas.height; y += 100) {
+        ctx.fillStyle = '#666';
+        const startY = Math.floor(viewTop / 80) * 80;
+        for (let y = startY; y < viewTop + viewHeight + 80; y += 80) {
             ctx.beginPath(); ctx.arc(wallWidth / 2, y, 2, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.arc(this.canvas.width - wallWidth / 2, y, 2, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(CONFIG.canvasWidth - wallWidth / 2, y, 2, 0, Math.PI * 2); ctx.fill();
         }
+        ctx.restore();
     }
 }

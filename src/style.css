@@ -188,27 +188,54 @@ body.menu-open #btn-exit-game {
 }
 
 .hud-item {
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 6px 14px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 8px 18px;
   border-radius: 50px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-weight: 800;
-  font-size: 0.85rem;
+  gap: 8px;
+  font-weight: 900;
+  font-size: 0.9rem;
   color: #fff;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+.hud-item:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .hud-icon {
-  font-size: 0.95rem;
+  font-size: 1.1rem;
+  filter: drop-shadow(0 0 5px currentColor);
+}
+
+.score-box {
+  background: linear-gradient(135deg, rgba(0, 209, 255, 0.15), rgba(255, 255, 255, 0.02));
+  border-color: rgba(0, 209, 255, 0.4);
+  color: #00d1ff;
 }
 
 .coin-box {
-  border-color: rgba(255, 204, 0, 0.3);
+  background: linear-gradient(135deg, rgba(255, 204, 0, 0.2), rgba(255, 255, 255, 0.02));
+  border-color: rgba(255, 204, 0, 0.4);
   color: #ffcc00;
+}
+
+.best-box {
+  background: linear-gradient(135deg, rgba(157, 0, 255, 0.15), rgba(255, 255, 255, 0.02));
+  border-color: rgba(157, 0, 255, 0.4);
+  color: #c97dff;
+}
+
+.combo-box {
+  background: linear-gradient(135deg, rgba(255, 62, 62, 0.15), rgba(255, 255, 255, 0.02));
+  border-color: rgba(255, 62, 62, 0.4);
+  color: #ff3e3e;
 }
 
 .minimal-exit-btn {
