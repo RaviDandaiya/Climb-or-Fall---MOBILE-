@@ -48,8 +48,8 @@
     }
 
     .game-logo-img {
-        width: 80px;
-        height: 80px;
+        width: min(90px, 25vw);
+        height: auto;
     }
 
     .horror-title {

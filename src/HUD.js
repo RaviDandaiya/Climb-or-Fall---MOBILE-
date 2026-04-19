@@ -7,9 +7,14 @@ export class HUDManager {
 
     updateHUD() {
         if (document.getElementById('coin-count')) document.getElementById('coin-count').innerText = this.game.coins;
-        if (document.getElementById('coin-count')) document.getElementById('coin-count').innerText = this.game.coins;
-        if (document.getElementById('pass-coin-count')) document.getElementById('pass-coin-count').innerText = this.game.coins;
+        if (document.getElementById('height-value')) document.getElementById('height-value').innerText = this.game.score;
+        if (document.getElementById('best-value')) document.getElementById('best-value').innerText = this.game.bestHeight;
+        if (document.getElementById('home-best-score')) document.getElementById('home-best-score').innerText = this.game.bestHeight;
         if (document.getElementById('combo-value')) document.getElementById('combo-value').innerText = this.game.combo;
+        
+        // Update death screen if visible
+        if (document.getElementById('fall-distance')) document.getElementById('fall-distance').innerText = this.game.score;
+        if (document.getElementById('best-distance-death')) document.getElementById('best-distance-death').innerText = this.game.bestHeight;
         
         // Progress logic: calculate based on total pass XP/task progression or just show next task
         // Find first locked pass level

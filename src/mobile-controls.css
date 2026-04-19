@@ -1,0 +1,153 @@
+/* Mobile Controls - Dedicated Buttons Layout */
+#mobile-controls {
+    position: absolute;
+    bottom: 25px;
+    left: 20px;
+    right: 20px;
+    pointer-events: none;
+    z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.controls-left {
+    display: flex;
+    gap: 15px;
+    pointer-events: auto;
+}
+
+.controls-right {
+    display: flex;
+    gap: 15px;
+    align-items: flex-end;
+    pointer-events: auto;
+}
+
+.touch-btn {
+    width: 85px;
+    height: 85px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 24px; /* More modern rounded square look */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: #ffffff;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: all 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.touch-btn:active {
+    background: rgba(255, 255, 255, 0.4);
+    transform: scale(0.85);
+    border-color: #00ffa3;
+    box-shadow: 0 0 20px rgba(0, 255, 163, 0.4);
+}
+
+.touch-btn-jump {
+    width: 100px;
+    height: 100px;
+    font-size: 2.8rem;
+    background: linear-gradient(135deg, rgba(0, 255, 163, 0.25), rgba(0, 255, 163, 0.1));
+    border-color: rgba(0, 255, 163, 0.5);
+    margin-bottom: 10px;
+    box-shadow: 0 10px 40px rgba(0, 255, 163, 0.2);
+}
+
+.touch-btn-jump:active {
+    background: rgba(0, 255, 163, 0.5);
+    box-shadow: 0 0 35px rgba(0, 255, 163, 0.6);
+}
+
+.floating-power {
+    width: 65px !important;
+    height: 65px !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3) !important;
+    transition: all 0.2s !important;
+    border-radius: 50%;
+    color: white;
+    font-size: 1.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    touch-action: manipulation;
+}
+
+.floating-power:active {
+    transform: scale(0.92);
+    background: rgba(0, 255, 136, 0.3) !important;
+}
+
+.floating-power.ad-required {
+    border-color: #ffcc00 !important;
+    box-shadow: 0 0 15px rgba(255, 204, 0, 0.4), 0 5px 20px rgba(0, 0, 0, 0.3) !important;
+    animation: pulse-gold 2s infinite;
+}
+
+.floating-power.ad-required::after {
+    content: 'AD';
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #ffcc00;
+    color: #000;
+    font-size: 0.7rem;
+    font-weight: 900;
+    padding: 3px 6px;
+    border-radius: 6px;
+    line-height: 1;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    z-index: 10;
+}
+
+@keyframes pulse-gold {
+    0% { box-shadow: 0 0 5px rgba(255, 204, 0, 0.4); }
+    50% { box-shadow: 0 0 20px rgba(255, 204, 0, 0.6); }
+    100% { box-shadow: 0 0 5px rgba(255, 204, 0, 0.4); }
+}
+
+.dash-cooldown-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 50%;
+    transform: scaleY(0);
+    transform-origin: bottom;
+}
+
+@media (max-width: 480px) {
+    #mobile-controls {
+        bottom: 15px;
+        left: 10px;
+        right: 10px;
+    }
+    .touch-btn {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+    }
+    .touch-btn-jump {
+        width: 70px;
+        height: 70px;
+        font-size: 2rem;
+    }
+    .floating-power {
+        width: 60px !important;
+        height: 60px !important;
+        font-size: 1.4rem;
+    }
+    .controls-left, .controls-right {
+        gap: 10px;
+    }
+}

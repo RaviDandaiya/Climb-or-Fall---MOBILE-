@@ -7,7 +7,7 @@ export class Renderer {
         this.ctx = this.canvas.getContext('2d', { alpha: false });
         this.platformCanvas = document.createElement('canvas');
         this.platformCanvas.width = 300;
-        this.platformCanvas.height = 30;
+        this.platformCanvas.height = 40;
         this.drawCachedPlatform();
     }
 
@@ -20,7 +20,7 @@ export class Renderer {
     drawCachedPlatform() {
         const pctx = this.platformCanvas.getContext('2d');
         const w = 200, h = CONFIG.platformHeight;
-        pctx.clearRect(0, 0, 300, 30);
+        pctx.clearRect(0, 0, 300, 40);
         pctx.fillStyle = '#666666'; pctx.strokeStyle = '#222222'; pctx.lineWidth = 3;
         this.roundRect(pctx, 5, 5, w - 10, h, 8);
         pctx.fill(); pctx.stroke();
@@ -54,12 +54,17 @@ export class Renderer {
         // 2. Camera & Global Transform
         ctx.save();
 
-        const scale = (this.canvas.width / CONFIG.canvasWidth) || 1;
+        // Correct scaling for mobile: always fit the 600-unit logical width (CONFIG.canvasWidth)
+        const baseWidth = CONFIG.canvasWidth;
+        const scale = (this.canvas.width / baseWidth) || 1;
         ctx.scale(scale, scale);
 
         if (this.game.player) {
             const viewportHeight = this.canvas.height / scale;
-            const offset = (this.game.modeStrategy && this.game.modeStrategy.name === 'fall') ? -viewportHeight * 0.25 : 100;
+            // Adaptive camera offset: keep the player more central on tall screens
+            const offset = (this.game.modeStrategy && this.game.modeStrategy.name === 'fall') 
+                ? -viewportHeight * 0.20 
+                : (viewportHeight * 0.35);
             const targetY = -this.game.player.position.y + viewportHeight / 2 + offset;
             
             if (!isNaN(targetY)) {
@@ -85,20 +90,15 @@ export class Renderer {
         const viewTop = -this.game.cameraY;
         const viewHeight = this.canvas.height / scale;
 
-        // Draw Walls
-        const pulse = 0.5 + 0.5 * Math.sin(time / 200);
-        ctx.fillStyle = `rgba(0, 255, 136, ${0.4 * pulse})`;
-        ctx.fillRect(18, viewTop, 2, viewHeight);
-        ctx.fillRect(CONFIG.canvasWidth - 20, viewTop, 2, viewHeight);
-
         // Draw Earth surface (only if visible)
-        const surfaceY = this.game.modeStrategy.name === 'climb' ? CONFIG.canvasHeight : 0;
-        if (Math.abs(surfaceY - (-this.game.cameraY)) < 2000) {
+        const surfaceY = this.game.modeStrategy.name === 'climb' ? (CONFIG.canvasHeight + 300) : 0;
+        if (Math.abs(surfaceY - (-this.game.cameraY)) < 2500) {
             ctx.fillStyle = '#3a2318';
+            // Anchor firmly: use a massive height so it always touches the screen bottom
             const surfaceH = this.game.modeStrategy.name === 'climb' ? 10000 : -10000;
-            ctx.fillRect(-50, surfaceY, CONFIG.canvasWidth + 100, surfaceH);
+            ctx.fillRect(-150, surfaceY, CONFIG.canvasWidth + 300, surfaceH);
             ctx.fillStyle = '#00af50';
-            ctx.fillRect(-50, surfaceY, CONFIG.canvasWidth + 100, this.game.modeStrategy.name === 'climb' ? 20 : -20);
+            ctx.fillRect(-150, surfaceY, CONFIG.canvasWidth + 300, this.game.modeStrategy.name === 'climb' ? 20 : -20);
         }
 
         // 3. Draw Background Theme Particles
@@ -159,7 +159,8 @@ export class Renderer {
                     this.roundRect(ctx, p.position.x - w / 2, p.position.y - 6, w, 15, 4);
                     ctx.fill();
                 } else {
-                    ctx.drawImage(this.platformCanvas, 5, 5, 190, 15, p.position.x - w / 2, p.position.y - 6, w, 15);
+                    const ph = CONFIG.platformHeight;
+                    ctx.drawImage(this.platformCanvas, 5, 5, 190, ph, p.position.x - w / 2, p.position.y - ph/2, w, ph);
                 }
                 ctx.restore();
             } else if (p.label === 'pillar') {
@@ -351,6 +352,9 @@ export class Renderer {
         }
         ctx.restore();
 
+        // Draw Side Walls (Pillar Walls)
+        this.drawSideWalls(ctx);
+
         if (this.game.player) {
             const skin = SKINS.find(s => s.id === this.game.activeSkinId);
             const velY = this.game.isGameOver ? 0 : Math.abs(this.game.player.velocity.y);
@@ -365,28 +369,54 @@ export class Renderer {
                 ctx.globalAlpha = 0.5;
             }
 
+            // Powerup Visual Enhancements
             if (this.game.hasShield) {
+                // Energetic Energy Ring
+                ctx.save();
+                ctx.rotate(time / 400); // Slowly rotate shield
                 ctx.beginPath();
-                ctx.arc(0, 0, CONFIG.playerRadius + 12, 0, Math.PI * 2);
-                ctx.strokeStyle = `rgba(0, 209, 255, ${0.4 + 0.2 * Math.sin(time / 100)})`;
+                ctx.arc(0, 0, CONFIG.playerRadius + 15, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(0, 209, 255, ${0.4 + 0.3 * Math.sin(time / 80)})`;
                 ctx.lineWidth = 4;
+                ctx.setLineDash([10, 5]); // Dashed "energy" look
                 ctx.stroke();
+                ctx.restore();
+                
+                // Outer shimmer
+                ctx.beginPath();
+                ctx.arc(0, 0, CONFIG.playerRadius + 18, 0, Math.PI * 2);
                 ctx.fillStyle = 'rgba(0, 209, 255, 0.05)';
                 ctx.fill();
             }
 
             if (this.game.magnetTimer > 0) {
+                // Inward attraction particles (Simulated)
+                for (let i = 0; i < 4; i++) {
+                    const angle = (time / 150) + (i * Math.PI / 2);
+                    const dist = 40 + (Math.sin(time / 200 + i) * 10);
+                    const px = Math.cos(angle) * dist;
+                    const py = Math.sin(angle) * dist;
+                    ctx.fillStyle = 'rgba(255, 62, 62, 0.6)';
+                    ctx.beginPath();
+                    ctx.arc(px, py, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
                 ctx.beginPath();
-                const magSize = 35 + Math.sin(time / 50) * 5;
+                const magSize = 38 + Math.sin(time / 50) * 4;
                 ctx.arc(0, 0, magSize, 0, Math.PI * 2);
-                ctx.strokeStyle = 'rgba(255, 62, 62, 0.3)';
-                ctx.setLineDash([5, 5]);
+                ctx.strokeStyle = 'rgba(255, 62, 62, 0.2)';
                 ctx.lineWidth = 2;
                 ctx.stroke();
-                ctx.setLineDash([]);
             }
 
             ctx.scale(squash, stretch);
+
+            // Add Bloom/Glow to character when powered up
+            if (this.game.hasShield || this.game.magnetTimer > 0) {
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = this.game.hasShield ? '#00d1ff' : '#ff3e3e';
+            }
 
             ctx.save();
             ctx.rotate(this.game.player.angle);
@@ -398,7 +428,8 @@ export class Renderer {
             ctx.lineWidth = 4;
             ctx.stroke();
             ctx.restore();
-
+            
+            ctx.shadowBlur = 0; // Reset glow for eyes
             ctx.fillStyle = '#ffffff';
 
             const eyeSpacing = 8;
@@ -515,6 +546,28 @@ export class Renderer {
                  ctx.fillStyle = `rgba(0, 0, 0, ${overlayOpacity})`;
                  ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
             }
+        }
+    }
+
+    drawSideWalls(ctx) {
+        // Draw Side Walls (Pillar Walls)
+        const wallWidth = 15;
+        const grad = ctx.createLinearGradient(0, 0, wallWidth, 0);
+        grad.addColorStop(0, '#222'); grad.addColorStop(0.5, '#555'); grad.addColorStop(1, '#111');
+        
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, wallWidth, this.canvas.height);
+        
+        const gradRight = ctx.createLinearGradient(this.canvas.width - wallWidth, 0, this.canvas.width, 0);
+        gradRight.addColorStop(0, '#111'); gradRight.addColorStop(0.5, '#555'); gradRight.addColorStop(1, '#222');
+        ctx.fillStyle = gradRight;
+        ctx.fillRect(this.canvas.width - wallWidth, 0, wallWidth, this.canvas.height);
+
+        // Add some metallic rivets to the walls
+        ctx.fillStyle = '#888';
+        for (let y = 0; y < this.canvas.height; y += 100) {
+            ctx.beginPath(); ctx.arc(wallWidth / 2, y, 2, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(this.canvas.width - wallWidth / 2, y, 2, 0, Math.PI * 2); ctx.fill();
         }
     }
 }

@@ -28,11 +28,11 @@ export class AdManager {
     async showGameOverAd() {
         if (!Capacitor.isNativePlatform()) return;
         try {
-            if ((await UnityAds.isRewardedVideoLoaded()).loaded) {
-                await UnityAds.showRewardedVideo();
+            if ((await UnityAds.isRewardedVideoLoaded({ placementId: 'Rewarded_Android' })).loaded) {
+                await UnityAds.showRewardedVideo({ placementId: 'Rewarded_Android' });
                 this.load();
-            } else if ((await UnityAds.isInterstitialLoaded()).loaded) {
-                await UnityAds.showInterstitial();
+            } else if ((await UnityAds.isInterstitialLoaded({ placementId: 'Interstitial_Android' })).loaded) {
+                await UnityAds.showInterstitial({ placementId: 'Interstitial_Android' });
                 this.load();
             }
         } catch (_) {}
@@ -59,37 +59,26 @@ export class AdManager {
                 if (timeLeft <= 0) {
                     clearInterval(interval);
                     adOverlay.remove();
-                    game.handleAdReward();
+                    if (game.handleAdReward) game.handleAdReward();
                 }
             }, 1000);
             return;
         }
+
         const btn = document.getElementById('ad-revive-btn');
-        btn.innerText = 'LOADING...';
-        btn.disabled = true;
+        if (btn) { btn.innerText = 'LOADING...'; btn.disabled = true; }
         try {
-            if ((await UnityAds.isRewardedVideoLoaded()).loaded) {
-                const result = await UnityAds.showRewardedVideo();
-                if (result.success) {
-                    game.handleAdReward();
-                } else {
-                    // Ad failed to finish, but we shouldn't show a blocking alert
-                    game.handleAdReward(); 
-                }
-            } else {
-                // Ad not loaded, give free revive instead of showing an alert
-                game.handleAdReward();
-                this.load();
-            }
+            await UnityAds.showRewardedVideo({ placementId: 'Rewarded_Android' });
+            if (game.handleAdReward) game.handleAdReward();
         } catch (_) {
-            game.handleAdReward(); // fallback
+            if (game.handleAdReward) game.handleAdReward(); // fallback
+            this.load();
         } finally {
-            btn.innerText = 'REVIVE';
-            btn.disabled = false;
+            if (btn) { btn.innerText = 'REVIVE'; btn.disabled = false; }
         }
     }
 
-    async startPowerAd() {
+    async startPowerAd(targetVx) {
         const game = this.game;
         if (game.isAdPlaying) return; // Prevent spam
 
@@ -98,7 +87,7 @@ export class AdManager {
         const grantPower = () => {
             game.isAdPlaying = false;
             game.powerUsesThisRun++;
-            game.modeStrategy.handleDash(game, game.inputManager.vx || 0);
+            if (game.modeStrategy.handleDash) game.modeStrategy.handleDash(game, targetVx);
         };
 
         if (!Capacitor.isNativePlatform()) {
@@ -126,19 +115,11 @@ export class AdManager {
         }
 
         try {
-            if ((await UnityAds.isRewardedVideoLoaded()).loaded) {
-                const result = await UnityAds.showRewardedVideo();
-                if (result.success) {
-                    grantPower();
-                } else {
-                    grantPower(); 
-                }
-            } else {
-                grantPower();
-                this.load();
-            }
+            await UnityAds.showRewardedVideo({ placementId: 'Rewarded_Android' });
+            grantPower();
         } catch (_) {
-            grantPower(); // fallback
+            game.isAdPlaying = false; // Just unpause, don't grant power
+            this.load();
         }
     }
 }

@@ -26,30 +26,37 @@ export class InputManager {
         });
 
         // Mobile buttons
-        const bindButton = (btn, key) => {
-            if (!btn) return;
+        const bindZone = (id, key) => {
+            const el = document.getElementById(id);
+            if (!el) return;
             const down = (e) => {
                 e.preventDefault();
                 this.keys[key] = true;
-                btn.classList.add('active');
                 try { if (game.audioManager?.audio?.state === 'suspended') game.audioManager.audio.resume(); } catch (_) {}
-                try { game.playUI(); } catch (_) {}
             };
-            const up = (e) => {
-                e.preventDefault();
-                this.keys[key] = false;
-                btn.classList.remove('active');
-            };
-            btn.addEventListener('pointerdown', down);
-            btn.addEventListener('pointerup', up);
-            btn.addEventListener('pointercancel', up);
-            btn.addEventListener('pointerleave', up);
+            const up = () => { this.keys[key] = false; };
+            el.addEventListener('pointerdown', down);
+            el.addEventListener('pointerup', up);
+            el.addEventListener('pointercancel', up);
+            el.addEventListener('pointerleave', up);
         };
 
-        bindButton(document.getElementById('btn-left'), 'ArrowLeft');
-        bindButton(document.getElementById('btn-right'), 'ArrowRight');
-        bindButton(document.getElementById('btn-jump'), 'TouchJump');
-        bindButton(document.getElementById('btn-power'), 'PowerDash');
+        bindZone('touch-left', 'ArrowLeft');
+        bindZone('touch-right', 'ArrowRight');
+        bindZone('touch-jump', 'TapJumpDirect');
+
+        const btnPower = document.getElementById('btn-power');
+        if (btnPower) {
+            btnPower.onpointerdown = (e) => {
+                e.preventDefault();
+                this.keys['PowerDash'] = true;
+                btnPower.classList.add('active');
+            };
+            btnPower.onpointerup = () => {
+                this.keys['PowerDash'] = false;
+                btnPower.classList.remove('active');
+            };
+        }
 
         // Device orientation (tilt)
         window.addEventListener('deviceorientation', (e) => {
@@ -58,7 +65,8 @@ export class InputManager {
             }
         });
 
-        // Canvas tap → jump
+        // Canvas tap → jump (REMOVED to prevent auto-jump/accidental jumping)
+        /*
         const handleTapStart = (e) => {
             if (e.target.tagName !== 'BUTTON') {
                 e.preventDefault();
@@ -72,6 +80,7 @@ export class InputManager {
         game.canvas.addEventListener('pointerup', handleTapEnd);
         game.canvas.addEventListener('pointercancel', handleTapEnd);
         game.canvas.addEventListener('pointerleave', handleTapEnd);
+        */
 
         // Control mode toggles
         this.setupControlModeToggles();
@@ -83,18 +92,14 @@ export class InputManager {
         const game = this.game;
         const btnTouch = document.getElementById('btn-touch-mode');
         const btnTilt = document.getElementById('btn-tilt-mode');
-        const leftGroup = document.querySelector('.control-group.left');
-        const rightGroup = document.querySelector('.control-group.right');
-        const btnJump = document.getElementById('btn-jump');
+        const mc = document.getElementById('mobile-controls');
 
         if (!btnTouch || !btnTilt) return;
 
         if (game.controlMode === 'tilt') {
             btnTouch.classList.remove('active');
             btnTilt.classList.add('active');
-            if (leftGroup) leftGroup.style.display = 'none';
-            if (rightGroup) rightGroup.style.display = 'flex'; // Keep power/jump visible for tilt
-            if (btnJump) btnJump.style.display = 'none';
+            if (mc) mc.style.display = 'none';
         }
 
         btnTouch.onclick = () => {
@@ -102,22 +107,30 @@ export class InputManager {
             localStorage.setItem('controlMode', 'touch');
             btnTouch.classList.add('active');
             btnTilt.classList.remove('active');
-            if (leftGroup) leftGroup.style.display = 'flex';
-            if (rightGroup) rightGroup.style.display = 'flex';
-            if (btnJump) btnJump.style.display = 'inline-flex';
+            if (mc) mc.style.display = 'flex';
         };
 
-        btnTilt.onclick = async () => {
+        btnTilt.onclick = async (e) => {
+            console.log("Tilt selection triggered");
+            if (e) e.preventDefault();
+            
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                try { await DeviceOrientationEvent.requestPermission(); } catch (_) {}
+                try { 
+                    const permission = await DeviceOrientationEvent.requestPermission();
+                    console.log("Orientation permission result:", permission);
+                } catch (err) { 
+                    console.warn("Tilt permission request failed:", err);
+                }
             }
+            
             game.controlMode = 'tilt';
             localStorage.setItem('controlMode', 'tilt');
+            
+            // Visual Update
             btnTilt.classList.add('active');
             btnTouch.classList.remove('active');
-            if (leftGroup) leftGroup.style.display = 'none';
-            if (rightGroup) rightGroup.style.display = 'flex'; // Keep power/jump visible
-            if (btnJump) btnJump.style.display = 'none';
+            
+            if (mc) mc.style.display = 'none';
         };
     }
 

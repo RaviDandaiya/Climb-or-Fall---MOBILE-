@@ -324,6 +324,28 @@ export class FallMode {
         return Math.random() < 0.7 ? 'shield' : 'magnet';
     }
     
+    update(game) {
+        if (game.isGameOver) {
+            this.startTime = null; 
+            return;
+        }
+        
+        // 1. Core Mechanics (Velocity, Difficulty, etc.)
+        this.updateFallMechanics(game);
+        
+        // 2. Move Spikes
+        this.updateLava(1.0);
+        
+        // 3. Update Score (Distance fallen)
+        const currentY = game.player.position.y;
+        const startY = this.getPlayerStartY();
+        const distFallen = Math.max(0, Math.floor((currentY - startY) / 10));
+        
+        if (distFallen > game.score) {
+            game.score = distFallen;
+        }
+    }
+
     updateFallMechanics(game) {
         if (game.isGameOver) {
             this.startTime = null; // Reset startTime so it re-initializes on next run

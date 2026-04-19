@@ -38,6 +38,7 @@ export class AudioManager {
     playJump() { this._playTone(520, 'sawtooth', 0, 0.09); }
     playCoin() { this._playTone(920, 'sine', 0, 0.08); }
     playLevelUp() { this._playTone(720, 'triangle', 0, 0.18); this._playTone(980, 'sine', 0.05, 0.12); }
+    playDeath() { this._playTone(120, 'sine', 0, 0.4); this._playTone(80, 'sawtooth', 0.1, 0.3); }
     playGameOver() { this._playTone(120, 'sine', 0, 0.4); }
     playFall() { this._playTone(300, 'sawtooth', 0, 0.5); }
     playShield() { this._playTone(640, 'triangle', 0, 0.18); this._playTone(960, 'sine', 0.08, 0.14); }

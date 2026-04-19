@@ -3,9 +3,9 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Climb-or-Fall | Ultimate Rage Platformer</title>
-    <link rel="icon" type="image/svg+xml" href="./logo.svg">
+    <link rel="icon" type="image/jpeg" href="./assets/logo.jpg">
     <link rel="manifest" href="./manifest.json">
 
     <meta name="google-adsense-account" content="ca-pub-5820888942116492">
@@ -24,7 +24,7 @@
     <meta property="og:title" content="Climb-or-Fall | Ultimate Rage Platformer">
     <meta property="og:description"
         content="Test your skill in the ultimate climbing challenge. Unlock exclusive skins and battle pass rewards.">
-    <meta property="og:image" content="https://ravidandaiya.github.io/Climb-or-Fall-/logo.svg">
+    <meta property="og:image" content="https://ravidandaiya.github.io/Climb-or-Fall-/assets/logo.jpg">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
@@ -32,7 +32,7 @@
     <meta property="twitter:title" content="Climb-or-Fall | Ultimate Rage Platformer">
     <meta property="twitter:description"
         content="Test your skill in the ultimate climbing challenge. Unlock exclusive skins and battle pass rewards.">
-    <meta property="twitter:image" content="https://ravidandaiya.github.io/Climb-or-Fall-/logo.svg">
+    <meta property="twitter:image" content="https://ravidandaiya.github.io/Climb-or-Fall-/assets/logo.jpg">
 
     <link rel="canonical" href="https://ravidandaiya.github.io/Climb-or-Fall-/">
 
@@ -49,7 +49,7 @@
         "Physics Game"
       ],
       "url": "https://ravidandaiya.github.io/Climb-or-Fall-/",
-      "image": "https://ravidandaiya.github.io/Climb-or-Fall-/logo.svg",
+      "image": "https://ravidandaiya.github.io/Climb-or-Fall-/assets/logo.jpg",
       "author": {
         "@type": "Person",
         "name": "Ravi Dandaiya"
@@ -63,46 +63,52 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;800;900&family=Creepster&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="./style.css">
-    <link rel="stylesheet" href="./mobile-controls.css">
-    <link rel="stylesheet" href="./responsive.css">
+    <link rel="stylesheet" href="./src/style.css">
+    <link rel="stylesheet" href="./src/mobile-controls.css">
+    <link rel="stylesheet" href="./src/responsive.css">
     <!-- Removed matter-js CDN script -->
 </head>
 
 <body>
     <div id="game-container">
-        <!-- Main Game HUD -->
-        <div id="ui-overlay">
-            <div class="hud-top-left">
-
-                <div class="hud-stats">
-                    <div class="stat-card">
-                        Score: <span id="height-value">0</span>
+        <!-- Modern Minimalist HUD -->
+        <div id="ui-overlay" class="hidden">
+            <div class="hud-bar">
+                <div class="hud-group">
+                    <div class="hud-item score-box">
+                        <span class="hud-icon">🎯</span> <span id="height-value">0</span>
                     </div>
-                    <div class="stat-card">
-                        Best: <span id="best-value">0</span>
+                    <div class="hud-item best-box">
+                        <span class="hud-icon">🏆</span> <span id="best-value">0</span>
                     </div>
-                    <div class="stat-card">
-                        Combo: x<span id="combo-value">1</span>
+                    <div class="hud-item combo-box">
+                        <span class="hud-icon">🔥</span> x<span id="combo-value">1</span>
                     </div>
                 </div>
-            </div>
-            <div class="hud-top-right">
-                <div class="stat-card coin-card">
-                    <span class="stat-value">🪙 <span id="coin-count">0</span></span>
+                
+                <div class="hud-spacer"></div>
+                
+                <div class="hud-group">
+                    <div class="hud-item coin-box">
+                        <span class="hud-icon">🪙</span> <span id="coin-count">0</span>
+                    </div>
+                    <button id="btn-exit-game" class="minimal-exit-btn">✕</button>
                 </div>
             </div>
         </div>
 
-        <!-- Mobile Controls (Left/Right/Jump) -->
-        <div id="mobile-controls">
-            <div class="control-group left">
-                <button class="control-btn" id="btn-left">←</button>
-                <button class="control-btn" id="btn-right">→</button>
+        <!-- Mobile Controls -->
+        <div id="mobile-controls" class="hidden">
+            <div class="controls-left">
+                <div id="touch-left" class="touch-btn">←</div>
+                <div id="touch-right" class="touch-btn">→</div>
             </div>
-            <div class="control-group right">
-                <button class="control-btn power-btn" id="btn-power">⚡</button>
-                <button class="control-btn" id="btn-jump">↑</button>
+            <div class="controls-right">
+                <button class="control-btn power-btn floating-power" id="btn-power">
+                    <span class="btn-icon">⚡</span>
+                    <div class="dash-cooldown-overlay"></div>
+                </button>
+                <div id="touch-jump" class="touch-btn touch-btn-jump">↑</div>
             </div>
         </div>
 
@@ -116,60 +122,66 @@
 
         <!-- Start Menu -->
         <div id="difficulty-screen" class="screen-overlay">
-            <div class="menu-logo-container">
-                <img src="./logo.svg" class="game-logo-img" alt="Climb-or-Fall Rage Platformer Game Logo">
+            <div class="compact-logo-row" style="margin-bottom: 15px;">
+                <img src="./assets/logo.jpg" class="game-logo-img floating" alt="Climb-or-Fall Logo">
                 <h1 class="logo-text">CLIMB<br><span>OR FALL</span></h1>
             </div>
 
-            <div class="screen-content">
-            <div class="controls-setup-box" style="margin-bottom: 20px;">
-                <span class="setup-label">MODE</span>
-                <div class="toggle-container">
-                    <button id="mode-climb" class="toggle-btn active">🧗 CLIMB</button>
-                    <button id="mode-fall" class="toggle-btn disabled" disabled title="Fall mode is coming soon">🕳️ FALL (Coming Soon)</button>
+            <!-- New High Score Banner -->
+            <div id="home-highscore-display" style="background: rgba(0,0,0,0.4); padding: 8px 20px; border-radius: 20px; border: 1px solid rgba(255,215,0,0.3); margin: 0 auto 20px auto; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); width: fit-content;">
+                <span style="font-size: 1.2rem;">🏆</span>
+                <span style="color: #ffd700; font-family: var(--font-main); font-weight: 800; font-size: 0.85rem; letter-spacing: 1.5px;">BEST SCORE: <span id="home-best-score">0</span></span>
+            </div>
+
+            <div class="screen-content" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+            <div class="settings-panel" style="margin: 0 auto;">
+                <div class="setting-item">
+                    <span class="setting-label">MODE</span>
+                    <div class="segmented-control">
+                        <button id="mode-climb" class="seg-btn active">CLIMB</button>
+                        <button id="mode-fall" class="seg-btn disabled" disabled>FALL 🔒</button>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <span class="setting-label">CONTROLS</span>
+                    <div class="segmented-control">
+                        <button id="btn-touch-mode" class="seg-btn active">TOUCH</button>
+                        <button id="btn-tilt-mode" class="seg-btn">TILT</button>
+                    </div>
+                </div>
+                <div class="setting-item last-item">
+                    <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 5px;">
+                        <span class="setting-label">SENSITIVITY</span>
+                        <span id="sensitivity-value" style="font-size: 0.75rem; font-weight: 800; color: #00ffa3;">100%</span>
+                    </div>
+                    <div class="slider-group" style="width: 100%;">
+                        <input type="range" id="sensitivity-slider" min="0.6" max="1.6" step="0.05" value="1" style="width: 100%;">
+                    </div>
                 </div>
             </div>
 
-            <div class="controls-setup-box">
-                <span class="setup-label">CONTROLS</span>
-                <div class="toggle-container">
-                    <button id="btn-touch-mode" class="toggle-btn active">👆 TOUCH</button>
-                    <button id="btn-tilt-mode" class="toggle-btn">📱 TILT</button>
-                </div>
+            <h1 class="horror-title" style="font-size: 1.1rem; margin: 10px auto 8px auto; color: rgba(255,255,255,0.6); letter-spacing: 2px; text-align: center;">CHOOSE DIFFICULTY</h1>
+            <div class="menu-buttons difficulty-selector" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; max-width: 320px; text-align: center; margin: 0 auto 25px auto;">
+                <button class="menu-btn difficulty-btn easy" data-difficulty="easy">EASY</button>
+                <button class="menu-btn difficulty-btn medium active" data-difficulty="medium">NORMAL</button>
+                <button class="menu-btn difficulty-btn hard" data-difficulty="hard">HARD</button>
             </div>
 
-            <div class="controls-setup-box">
-                <span class="setup-label">SENSITIVITY</span>
-                <div class="slider-row">
-                    <input type="range" id="sensitivity-slider" min="0.6" max="1.6" step="0.05" value="1">
-                    <span id="sensitivity-value" class="slider-value">100%</span>
+            <!-- New Primary Start Button -->
+            <button id="btn-start-run" class="modern-btn" style="width: 100%; max-width: 250px; height: 60px; min-height: 60px; margin: 0 auto 20px auto; display: flex; justify-content: center;">
+                <span class="btn-text" style="font-size: 1.1rem; letter-spacing: 2px; font-weight: 900;">START RUN</span>
+                <div class="btn-glow"></div>
+            </button>
+            <div class="footer-container" style="margin-top: auto; padding-bottom: 25px; display: flex; flex-direction: column; align-items: center; width: 100%;">
+                <div class="legal-links">
+                    <a href="privacy-policy.html" target="_blank">Privacy Policy</a>
+                    <span>|</span>
+                    <a href="terms-conditions.html" target="_blank">Terms & Conditions</a>
                 </div>
-                <p class="slider-hint">Tune how responsive jump, tilt, and movement feel.</p>
-            </div>
-
-            <h1 class="horror-title" style="font-size: 3rem; margin-top: 10px;">CHOOSE FATE</h1>
-            <div class="menu-buttons">
-                <button class="menu-btn easy" data-difficulty="easy">
-                    EASY
-                    <span class="btn-desc">Steady climb</span>
-                </button>
-                <button class="menu-btn medium" data-difficulty="medium">
-                    NORMAL
-                    <span class="btn-desc">Balanced pain</span>
-                </button>
-                <button class="menu-btn hard" data-difficulty="hard">
-                    HARD
-                    <span class="btn-desc">Pure agony</span>
-                </button>
-            </div>
-            <div class="legal-links">
-                <a href="privacy-policy.html" target="_blank">Privacy Policy</a>
-                <span>|</span>
-                <a href="terms-conditions.html" target="_blank">Terms & Conditions</a>
-            </div>
-            <div class="brand-strip">
-                <img src="./assets/company-logo.png" alt="Company Logo" class="brand-logo">
-                <span class="brand-text">Developed by Skyforge</span>
+                <div class="brand-strip">
+                    <img src="./assets/company-logo.png" alt="Company Logo" class="brand-logo">
+                    <span class="brand-text">Developed by Skyforge</span>
+                </div>
             </div>
             </div>
 
@@ -225,8 +237,8 @@
                 </div>
                 
                 <div class="death-actions-modern">
-                    <button class="modern-btn action-revive" id="ad-revive-btn">
-                        <span class="btn-icon">▶</span> <span class="btn-text">REVIVE</span>
+                    <button class="modern-btn action-revive" id="ad-revive-btn" style="display: flex !important; flex: 2 !important; visibility: visible !important; opacity: 1 !important; min-width: 120px;">
+                        <span class="btn-icon">📺</span> <span class="btn-text">WATCH AD REVIVE</span>
                         <div class="btn-glow"></div>
                     </button>
                     <button class="modern-btn action-retry" id="retry-button">
@@ -244,7 +256,7 @@
         <canvas id="game-canvas"></canvas>
     </div>
     <!-- Removed CDN link effectively -->
-    <script type="module" src="./main.js"></script>
+    <script type="module" src="./src/main.js"></script>
 </body>
 
 </html>

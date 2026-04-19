@@ -19,21 +19,26 @@ export class WorldManager {
         const floorY = game.modeStrategy.getFloorY();
         const floor = Bodies.rectangle(CONFIG.canvasWidth / 2, floorY, CONFIG.canvasWidth * 10, 200, {
             isStatic: true,
-            label: 'floor'
+            label: 'floor',
+            friction: 0.2
         });
-        game.leftWall = Bodies.rectangle(10, CONFIG.canvasHeight / 2, 20, CONFIG.canvasHeight * 2, {
+        // Precise wall placement
+        game.leftWall = Bodies.rectangle(0, -5000, 40, 20000, {
             isStatic: true, label: 'wall', friction: 0.1
         });
-        game.rightWall = Bodies.rectangle(CONFIG.canvasWidth - 10, CONFIG.canvasHeight / 2, 20, CONFIG.canvasHeight * 2, {
+        game.rightWall = Bodies.rectangle(CONFIG.canvasWidth, -5000, 40, 20000, {
             isStatic: true, label: 'wall', friction: 0.1
         });
         World.add(game.world, [floor, game.leftWall, game.rightWall]);
     }
 
     generateInitialPlatforms(settings) {
-        for (let i = 0; i < 5; i++) {
+        // More platforms at start for immediate engagement
+        for (let i = 0; i < 10; i++) {
             const y = this.game.modeStrategy.getInitialPlatformY(i, settings);
             this.addPlatform(y, i);
+            // Immediate interaction: add coins to the first few platforms
+            if (i < 5) this.addCoin(Math.random() * CONFIG.canvasWidth, y - 50);
         }
     }
 
@@ -41,6 +46,10 @@ export class WorldManager {
         const game = this.game;
         if (game.isGameOver) return;
         const settings = DIFFICULTY_SETTINGS[game.difficulty];
+
+        // Overlap safety: Don't spawn if too close to another platform vertically
+        const tooClose = game.platforms.some(p => Math.abs(p.position.y - y) < CONFIG.platformHeight * 2);
+        if (tooClose) return;
 
         if (game.modeStrategy.createCustomPlatform && game.modeStrategy.createCustomPlatform(y, index, settings, game)) {
             return;
@@ -158,15 +167,22 @@ export class WorldManager {
     addEnemy(y) {
         const game = this.game;
         const x = Math.random() * (CONFIG.canvasWidth - 100) + 50;
+        
+        // Decide enemy type: higher chance for Stalkers in later stages
+        const isStalker = game.stage >= 2 && Math.random() < 0.3;
+        const label = isStalker ? 'enemy_stalker' : 'enemy';
+
         let e = game.pool.enemy.pop();
         if (e) {
             Body.setPosition(e, { x, y });
+            e.label = label;
             World.add(game.world, e);
         } else {
-            e = Bodies.rectangle(x, y, 40, 30, { isStatic: true, isSensor: true, label: 'enemy' });
+            e = Bodies.rectangle(x, y, 40, 30, { isStatic: true, isSensor: true, label: label });
             World.add(game.world, e);
         }
-        e.moveSpeed = (Math.random() < 0.5 ? 2 : -2);
+        e.isStalker = isStalker;
+        e.moveSpeed = (Math.random() < 0.5 ? 2 : -2) * (1 + (game.stage * 0.2));
         game.enemies.push(e);
     }
 
@@ -211,7 +227,9 @@ export class WorldManager {
         let nextY = game.modeStrategy.getNextPlatformY(game.platforms, py, settings);
         while (nextY !== null && !game.isGameOver && game.platforms.length < 40) {
             this.addPlatform(nextY, game.platforms.length);
-            if (game.stage >= 1 && Math.random() < 0.1) {
+            // Spawn enemies based on stage progression (e.g. stage 2+ starts regular spawns)
+            const enemySpawnChance = 0.05 + (game.stage * 0.05); // Increases with stage
+            if (game.stage >= 1 && Math.random() < Math.min(0.4, enemySpawnChance)) {
                 this.addEnemy(nextY + game.modeStrategy.getEnemySpawnOffset());
             }
             nextY = game.modeStrategy.getNextPlatformY(game.platforms, py, settings);
@@ -242,9 +260,91 @@ export class WorldManager {
 
     updateEnemies() {
         const game = this.game;
+        const player = game.player;
+        if (!player) return;
+
         game.enemies.forEach(e => {
-            if (e.position.x < 40 || e.position.x > CONFIG.canvasWidth - 40) e.moveSpeed *= -1;
+            if (e.isStalker) {
+                // Stalker AI: move towards player if vertically close
+                const distY = Math.abs(e.position.y - player.position.y);
+                const distX = player.position.x - e.position.x;
+                
+                if (distY < 400) {
+                    // Charge!
+                    const dir = distX > 0 ? 1 : -1;
+                    e.moveSpeed = dir * (4 + (game.stage * 0.5));
+                } else {
+                    // Patrol
+                    if (e.position.x < 40 || e.position.x > CONFIG.canvasWidth - 40) e.moveSpeed *= -1;
+                }
+            } else {
+                // Regular Patrol AI
+                if (e.position.x < 40 || e.position.x > CONFIG.canvasWidth - 40) e.moveSpeed *= -1;
+            }
             Body.translate(e, { x: e.moveSpeed, y: 0 });
         });
+    }
+
+    updateMagnets() {
+        const game = this.game;
+        if (game.magnetTimer <= 0 || !game.player || game.isGameOver) return;
+
+        game.activeCoins.forEach(coin => {
+            const dist = Math.sqrt(Math.pow(coin.position.x - game.player.position.x, 2) + Math.pow(coin.position.y - game.player.position.y, 2));
+            if (dist < 320) {
+                // Move towards player
+                const dirX = (game.player.position.x - coin.position.x) / dist;
+                const dirY = (game.player.position.y - coin.position.y) / dist;
+                
+                const magSpeed = (320 - dist) / 5; // Faster if closer
+                Body.translate(coin, { x: dirX * magSpeed, y: dirY * magSpeed });
+            }
+        });
+    }
+
+    // ─── Interaction Helpers ────────────────────────────────────
+
+    collectCoin(body) {
+        const game = this.game;
+        game.coins++;
+        game.totalCoinsAcc++;
+        localStorage.setItem('coins', game.coins);
+        localStorage.setItem('totalCoinsAcc', game.totalCoinsAcc);
+        
+        World.remove(game.world, body);
+        game.activeCoins = game.activeCoins.filter(c => c !== body);
+        game.pool.coin.push(body);
+        
+        game.particleSystem.createExplosion(body.position, '#ffcc00', 8);
+        if (game.audioManager && game.audioManager.playCoin) game.audioManager.playCoin();
+        game.hud.updateHUD();
+    }
+
+    collectPowerup(body) {
+        const game = this.game;
+        const type = body.powerupType;
+        
+        if (type === 'shield') game.hasShield = true;
+        if (type === 'magnet') game.magnetTimer = 600; // ~10 seconds at 60fps
+        
+        World.remove(game.world, body);
+        game.powerups = game.powerups.filter(p => p !== body);
+        game.pool.powerup.push(body);
+        
+        const color = type === 'shield' ? '#00d1ff' : '#ff3e3e';
+        game.particleSystem.createExplosion(body.position, color, 15);
+        if (game.audioManager && game.audioManager.playPowerup) game.audioManager.playPowerup();
+        game.hud.updateHUD();
+    }
+
+    destroyEnemy(body) {
+        const game = this.game;
+        World.remove(game.world, body);
+        game.enemies = game.enemies.filter(e => e !== body);
+        game.pool.enemy.push(body);
+        
+        game.particleSystem.createExplosion(body.position, '#ff0044', 20);
+        game.addXP && game.addXP(50);
+        game.shake = 10;
     }
 }
