@@ -12,7 +12,8 @@ export const THEMES = [
     { name: 'Water', bg: ['#041c40', '#0eaaf0'], accent: '#22d3ee' },
     { name: 'Earth', bg: ['#2e1503', '#523412'], accent: '#d97706' },
     { name: 'Rain', bg: ['#1c202a', '#39465c'], accent: '#94a3b8' },
-    { name: 'Space', bg: ['#050112', '#1a043c'], accent: '#c084fc' }
+    { name: 'Space', bg: ['#050112', '#1a043c'], accent: '#c084fc' },
+    { name: 'Cyber', bg: ['#0a0014', '#1e003c'], accent: '#00ffcc' }
 ];
 
 export const DIFFICULTY_SETTINGS = {
@@ -89,6 +90,96 @@ export const SKINS = [
         cost: 3200,
         desc: 'Buy for 3200 Coins',
         isUnlocked: (game) => game.isSkinOwned ? game.isSkinOwned('nova') : false
+    },
+    {
+        id: 'robo',
+        name: 'TITAN',
+        color: '#00ccff',
+        shape: 'robo',
+        bodyColor: '#2c3e50',
+        strokeColor: '#00ccff',
+        eyeColor: '#ff0000',
+        glowColor: '#00ccff',
+        trailColor: '#00ccff',
+        unlockMode: 'coins',
+        cost: 2500,
+        desc: 'Unlock for 2500 Coins',
+        isUnlocked: (game) => game.isSkinOwned ? game.isSkinOwned('robo') : false
+    },
+    {
+        id: 'slime',
+        name: 'SLIME',
+        color: '#00ff88',
+        shape: 'blob',
+        bodyColor: '#004422',
+        strokeColor: '#00ff88',
+        eyeColor: '#ffffff',
+        glowColor: '#00ff88',
+        trailColor: '#00ff88',
+        unlockMode: 'coins',
+        cost: 200,
+        desc: 'Buy for 200 Coins',
+        isUnlocked: (game) => game.isSkinOwned ? game.isSkinOwned('slime') : false
+    },
+    {
+        id: 'specter',
+        name: 'SPECTER',
+        color: '#ffffff',
+        shape: 'ghost',
+        bodyColor: '#1a1a2a',
+        strokeColor: '#ffffff',
+        eyeColor: '#00ccff',
+        glowColor: '#ffffff',
+        trailColor: '#ffffff',
+        unlockMode: 'coins',
+        cost: 500,
+        desc: 'Buy for 500 Coins',
+        isUnlocked: (game) => game.isSkinOwned ? game.isSkinOwned('specter') : false
+    },
+    {
+        id: 'gem',
+        name: 'GEM',
+        color: '#00d1ff',
+        shape: 'diamond',
+        bodyColor: '#001a33',
+        strokeColor: '#00d1ff',
+        eyeColor: '#ffffff',
+        glowColor: '#00d1ff',
+        trailColor: '#00d1ff',
+        unlockMode: 'coins',
+        cost: 800,
+        desc: 'Buy for 800 Coins',
+        isUnlocked: (game) => game.isSkinOwned ? game.isSkinOwned('gem') : false
+    },
+    {
+        id: 'oculus',
+        name: 'OCULUS',
+        color: '#ff0055',
+        shape: 'eye',
+        bodyColor: '#1a0008',
+        strokeColor: '#ff0055',
+        eyeColor: '#ffffff',
+        glowColor: '#ff0055',
+        trailColor: '#ff0055',
+        unlockMode: 'coins',
+        cost: 1200,
+        desc: 'Buy for 1200 Coins',
+        isUnlocked: (game) => game.isSkinOwned ? game.isSkinOwned('oculus') : false
+    },
+    {
+        id: 'cube',
+        name: 'CUBE',
+        color: '#ffcc00',
+        shape: 'cube',
+        bodyColor: '#1a1400',
+        strokeColor: '#ffcc00',
+        eyeColor: '#ffffff',
+        glowColor: '#ffcc00',
+        trailColor: '#ffcc00',
+        unlockMode: 'coins',
+        cost: 1500,
+        desc: 'Buy for 1500 Coins',
+        isUnlocked: (game) => game.isSkinOwned ? game.isSkinOwned('cube') : false
     }
 ];
 

@@ -137,6 +137,8 @@ export class WorldManager {
             coin = Bodies.circle(x, y, 8, { isStatic: true, isSensor: true, label: 'coin' });
             World.add(game.world, coin);
         }
+        // 10% chance to be a BIG COIN worth 5
+        coin.value = Math.random() < 0.1 ? 5 : 1;
         game.activeCoins.push(coin);
     }
 
@@ -290,14 +292,18 @@ export class WorldManager {
         if (game.magnetTimer <= 0 || !game.player || game.isGameOver) return;
 
         game.activeCoins.forEach(coin => {
-            const dist = Math.sqrt(Math.pow(coin.position.x - game.player.position.x, 2) + Math.pow(coin.position.y - game.player.position.y, 2));
-            if (dist < 320) {
-                // Move towards player
-                const dirX = (game.player.position.x - coin.position.x) / dist;
-                const dirY = (game.player.position.y - coin.position.y) / dist;
+            const dx = game.player.position.x - coin.position.x;
+            const dy = game.player.position.y - coin.position.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            if (dist < 350) {
+                // Determine attraction speed: stronger when closer
+                const attractSpeed = Math.max(2, (350 - dist) / 12);
+                const dirX = dx / dist;
+                const dirY = dy / dist;
                 
-                const magSpeed = (320 - dist) / 5; // Faster if closer
-                Body.translate(coin, { x: dirX * magSpeed, y: dirY * magSpeed });
+                // Move coin towards player
+                Body.translate(coin, { x: dirX * attractSpeed, y: dirY * attractSpeed });
             }
         });
     }
@@ -306,8 +312,9 @@ export class WorldManager {
 
     collectCoin(body) {
         const game = this.game;
-        game.coins++;
-        game.totalCoinsAcc++;
+        const val = body.value || 1;
+        game.coins += val;
+        game.totalCoinsAcc += val;
         localStorage.setItem('coins', game.coins);
         localStorage.setItem('totalCoinsAcc', game.totalCoinsAcc);
         

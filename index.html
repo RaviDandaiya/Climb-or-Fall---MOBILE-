@@ -92,9 +92,9 @@
                     <div class="hud-item coin-box">
                         <span class="hud-icon">🪙</span> <span id="coin-count">0</span>
                     </div>
-                    <button id="btn-exit-game" class="minimal-exit-btn">✕</button>
                 </div>
             </div>
+            <button id="btn-exit-game" class="exit-btn">✕</button>
         </div>
 
         <!-- Mobile Controls -->
@@ -112,10 +112,9 @@
             </div>
         </div>
 
-        <!-- Navigation Sidebar -->
-        <div id="side-nav">
-            <button class="nav-icon" id="btn-shop">👕</button>
-            <button class="nav-icon" id="btn-pass">⚔️</button>
+        <!-- Single Unified Rewards Hub -->
+        <div id="rewards-hub" class="floating-nav" style="right: 20px; top: 120px; transform: none;">
+            <button class="nav-icon" id="btn-rewards-hub">🎁</button>
         </div>
 
         <!-- Login Screen REMOVED -->
@@ -160,12 +159,15 @@
                 </div>
             </div>
 
-            <h1 class="horror-title" style="font-size: 1.1rem; margin: 10px auto 8px auto; color: rgba(255,255,255,0.6); letter-spacing: 2px; text-align: center;">CHOOSE DIFFICULTY</h1>
-            <div class="menu-buttons difficulty-selector" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; max-width: 320px; text-align: center; margin: 0 auto 25px auto;">
-                <button class="menu-btn difficulty-btn easy" data-difficulty="easy">EASY</button>
-                <button class="menu-btn difficulty-btn medium active" data-difficulty="medium">NORMAL</button>
-                <button class="menu-btn difficulty-btn hard" data-difficulty="hard">HARD</button>
-            </div>
+             <h1 class="horror-title" style="font-size: 1.1rem; margin: 10px auto 8px auto; color: rgba(255,255,255,0.6); letter-spacing: 2px; text-align: center;">DIFFICULTY</h1>
+             <div class="difficulty-hub-container">
+                 <button id="difficulty-hub" class="hub-main-btn">NORMAL</button>
+                 <div id="difficulty-options" class="hub-options-grid hidden">
+                     <button class="hub-opt easy" data-difficulty="easy">EASY</button>
+                     <button class="hub-opt medium" data-difficulty="medium">NORMAL</button>
+                     <button class="hub-opt hard" data-difficulty="hard">HARD</button>
+                 </div>
+             </div>
 
             <!-- New Primary Start Button -->
             <button id="btn-start-run" class="modern-btn" style="width: 100%; max-width: 250px; height: 60px; min-height: 60px; margin: 0 auto 20px auto; display: flex; justify-content: center;">
@@ -187,27 +189,30 @@
 
         </div>
 
-        <!-- Shop Screen -->
-        <div id="shop-screen" class="screen-overlay hidden">
-            <button class="close-btn">×</button>
-            <h1 class="horror-title">SKIN BOUTIQUE</h1>
-            <div class="skin-grid" id="skin-container">
-                <!-- Skins will be injected here -->
+        <!-- Unified Reward Menu (Shop & Battle Pass) -->
+        <div id="reward-menu" class="screen-overlay hidden">
+            <button class="close-btn" id="btn-close-rewards">×</button>
+            <div class="tab-header">
+                <button class="tab-btn active" id="tab-shop">👕 SKINS</button>
+                <button class="tab-btn" id="tab-pass">⚔️ PASS</button>
             </div>
-        </div>
-
-        <!-- Battle Pass Screen -->
-        <div id="pass-screen" class="screen-overlay hidden">
-            <button class="close-btn">×</button>
-            <h1 class="horror-title">BATTLE PASS</h1>
-            <div class="pass-progress-container">
-                <div class="pass-bar">
-                    <div id="pass-fill"></div>
+            
+            <div id="shop-view" class="tab-content">
+                <h1 class="horror-title" style="margin-top: 10px;">SKIN BOUTIQUE</h1>
+                <div class="skin-grid" id="skin-container">
+                    <!-- Skins will be injected here -->
                 </div>
-                <p>Level <span id="pass-level">1</span></p>
             </div>
-            <div class="pass-rewards" id="pass-rewards-container">
-                <!-- Pass items injected here -->
+
+            <div id="pass-view" class="tab-content hidden">
+                <h1 class="horror-title" style="margin-top: 10px;">BATTLE PASS</h1>
+                <div class="pass-progress-header">
+                    <span id="pass-level">LEVEL 1</span>
+                    <div class="pass-xp-bar"><div id="pass-progress" class="pass-xp-fill"></div></div>
+                </div>
+                <div class="rewards-list" id="pass-rewards-container">
+                    <!-- Rewards injected here -->
+                </div>
             </div>
         </div>
 

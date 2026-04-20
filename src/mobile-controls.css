@@ -166,26 +166,28 @@
 
 @media (max-width: 480px) {
     #mobile-controls {
-        bottom: 15px;
-        left: 10px;
-        right: 10px;
+        bottom: 25px;
+        left: 15px;
+        right: 15px;
     }
     .touch-btn {
-        width: 60px;
-        height: 60px;
-        font-size: 1.5rem;
-    }
-    .touch-btn-jump {
         width: 70px;
         height: 70px;
+        font-size: 1.6rem;
+        border-radius: 18px;
+    }
+    .touch-btn-jump {
+        width: 85px;
+        height: 85px;
         font-size: 2rem;
+        border-radius: 22px;
     }
     .floating-power {
-        width: 60px !important;
-        height: 60px !important;
+        width: 65px !important;
+        height: 65px !important;
         font-size: 1.4rem;
     }
     .controls-left, .controls-right {
-        gap: 10px;
+        gap: 12px;
     }
 }

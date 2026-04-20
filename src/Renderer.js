@@ -57,6 +57,50 @@ export class Renderer {
                 else ctx.lineTo(x, y);
             }
             ctx.closePath();
+        } else if (shape === 'robo') {
+            // Square mechanical head
+            ctx.rect(-radius * 0.95, -radius * 0.95, radius * 1.9, radius * 1.9);
+            
+            // Side "bolts" or ears
+            ctx.rect(-radius * 1.15, -radius * 0.3, radius * 0.2, radius * 0.6);
+            ctx.rect(radius * 0.95, -radius * 0.3, radius * 0.2, radius * 0.6);
+            
+            // Antenna
+            ctx.moveTo(0, -radius * 0.95);
+            ctx.lineTo(0, -radius * 1.4);
+            ctx.arc(0, -radius * 1.5, 3, 0, Math.PI * 2);
+            ctx.closePath();
+        } else if (shape === 'blob') {
+            const points = 8;
+            for (let i = 0; i < points; i++) {
+                const angle = (i / points) * Math.PI * 2;
+                const r = radius * (0.9 + Math.sin(angle * 3 + performance.now() / 200) * 0.1);
+                const x = Math.cos(angle) * r;
+                const y = Math.sin(angle) * r;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+        } else if (shape === 'ghost') {
+            ctx.arc(0, -radius * 0.2, radius, Math.PI, 0);
+            ctx.lineTo(radius, radius);
+            for (let i = 0; i < 3; i++) {
+                const x = radius - (i * radius * 0.66) - radius * 0.33;
+                ctx.quadraticCurveTo(x, radius + 10, x - radius * 0.33, radius);
+            }
+            ctx.lineTo(-radius, -radius * 0.2);
+            ctx.closePath();
+        } else if (shape === 'diamond') {
+            ctx.moveTo(0, -radius * 1.3);
+            ctx.lineTo(radius * 0.9, 0);
+            ctx.lineTo(0, radius * 1.3);
+            ctx.lineTo(-radius * 0.9, 0);
+            ctx.closePath();
+        } else if (shape === 'eye') {
+            ctx.ellipse(0, 0, radius * 1.2, radius * 0.8, 0, 0, Math.PI * 2);
+            ctx.closePath();
+        } else if (shape === 'cube') {
+            ctx.rect(-radius, -radius, radius * 2, radius * 2);
         } else {
             ctx.arc(0, 0, radius, 0, Math.PI * 2);
         }
@@ -137,6 +181,24 @@ export class Renderer {
         }
         ctx.translate(0, this.game.cameraY || 0);
 
+        // Draw Speed Lines if dashing
+        if (this.game.dashEffectTimer > 0) {
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0); // Overlay on top
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.lineWidth = 2;
+            const lineCount = 15;
+            for(let i=0; i<lineCount; i++) {
+                const x = (Math.random() * this.canvas.width);
+                const y = (Math.random() * this.canvas.height);
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x, y + 100);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
         // Draw Side Walls (Pillar Walls) - logical width 600
         this.drawSideWalls(ctx);
 
@@ -158,8 +220,26 @@ export class Renderer {
             // Anchor firmly: use a massive height so it always touches the screen bottom
             const surfaceH = this.game.modeStrategy.name === 'climb' ? 10000 : -10000;
             ctx.fillRect(-150, surfaceY, CONFIG.canvasWidth + 300, surfaceH);
-            ctx.fillStyle = '#00af50';
-            ctx.fillRect(-150, surfaceY, CONFIG.canvasWidth + 300, this.game.modeStrategy.name === 'climb' ? 20 : -20);
+            ctx.fillStyle = '#00ff88'; // Bright Green ground topper
+            ctx.fillRect(-150, surfaceY, CONFIG.canvasWidth + 300, this.game.modeStrategy.name === 'climb' ? 12 : -12);
+        }
+
+        // Draw Last Death / Best Height Line (Green Line)
+        if (this.game.lastGameOverY !== null) {
+            ctx.save();
+            ctx.setLineDash([10, 10]);
+            ctx.strokeStyle = '#00ff88';
+            ctx.lineWidth = 3;
+            ctx.globalAlpha = 0.6;
+            ctx.beginPath();
+            ctx.moveTo(0, this.game.lastGameOverY);
+            ctx.lineTo(CONFIG.canvasWidth, this.game.lastGameOverY);
+            ctx.stroke();
+            // Label
+            ctx.fillStyle = '#00ff88';
+            ctx.font = 'bold 16px sans-serif';
+            ctx.fillText('LAST BEST', 20, this.game.lastGameOverY - 10);
+            ctx.restore();
         }
 
         // 3. Draw Background Theme Particles
@@ -193,6 +273,13 @@ export class Renderer {
                 s.y = (s.y + 0.5) % (this.canvas.height / scale + 1000);
                 ctx.fillStyle = `rgba(150, 100, 50, ${s.opacity * 0.6})`;
                 ctx.fillRect(s.x, s.y - 500, s.size * 1.5, s.size * 1.5);
+            } else if (themeName === 'Cyber') {
+                // Horizontal data streams
+                const speed = 2 + s.size;
+                s.x = (s.x + speed) % (CONFIG.canvasWidth + 200);
+                if (s.x > CONFIG.canvasWidth + 100) s.x = -100;
+                ctx.fillStyle = `rgba(0, 255, 204, ${s.opacity * 0.3})`;
+                ctx.fillRect(s.x, s.y - 500, s.size * 10, 1);
             }
         });
 
@@ -496,7 +583,27 @@ export class Renderer {
             const eyeSpacing = 8;
             const isBlinking = (time % 3500) < 150 || (velY < 0.5 && (time % 2000) < 100);
 
-            if (isBlinking) {
+            if (skin.shape === 'eye') {
+                // One Big Central Eye
+                if (isBlinking) {
+                    ctx.strokeStyle = eyeColor;
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(-10, 0);
+                    ctx.lineTo(10, 0);
+                    ctx.stroke();
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 10, 0, Math.PI * 2);
+                    ctx.fillStyle = eyeColor;
+                    ctx.fill();
+                    // Pupil
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 5, 0, Math.PI * 2);
+                    ctx.fillStyle = '#000';
+                    ctx.fill();
+                }
+            } else if (isBlinking) {
                 ctx.strokeStyle = eyeColor;
                 ctx.lineWidth = 3;
                 ctx.beginPath();
@@ -581,15 +688,27 @@ export class Renderer {
         ctx.translate(0, this.game.cameraY);
         const cmult = Math.min(1.5, 1 + this.game.coins / 500);
         this.game.activeCoins.forEach(c => {
+            const isBig = c.value > 1;
             ctx.translate(c.position.x, c.position.y);
-            ctx.rotate(time / 500);
+            ctx.rotate(time / (isBig ? 200 : 500));
+            
+            if (isBig) {
+                // Glow for big coin
+                const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 20);
+                grad.addColorStop(0, 'rgba(255, 215, 0, 0.4)');
+                grad.addColorStop(1, 'transparent');
+                ctx.fillStyle = grad;
+                ctx.beginPath(); ctx.arc(0, 0, 20, 0, Math.PI*2); ctx.fill();
+            }
+
+            const cSize = isBig ? 12 : 8;
             ctx.beginPath();
-            ctx.arc(0, 0, 8 * cmult, 0, Math.PI * 2);
-            ctx.fillStyle = '#ffb300'; // rich gold
+            ctx.arc(0, 0, cSize * cmult, 0, Math.PI * 2);
+            ctx.fillStyle = isBig ? '#ffde00' : '#ffb300'; 
             ctx.fill();
             ctx.beginPath();
-            ctx.arc(0, 0, 6 * cmult, 0, Math.PI * 2);
-            ctx.fillStyle = '#ffe066'; // bright highlight
+            ctx.arc(0, 0, (cSize - 2) * cmult, 0, Math.PI * 2);
+            ctx.fillStyle = isBig ? '#ffffff' : '#ffe066'; 
             ctx.fill();
             ctx.resetTransform();
             ctx.scale(scale, scale);

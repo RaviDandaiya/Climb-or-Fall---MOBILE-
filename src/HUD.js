@@ -84,8 +84,10 @@ export class HUDManager {
             card.innerHTML = `
                 ${statusHTML}
                 <div class="skin-preview skin-preview-${previewShape}" style="background: ${previewColor}; --preview-eye-color: ${previewEyeColor};">
+                    ${previewShape !== 'eye' ? `
                     <span class="skin-preview-eye skin-preview-eye-left"></span>
                     <span class="skin-preview-eye skin-preview-eye-right"></span>
+                    ` : ''}
                 </div>
                 <h3>${skin.name}</h3>
             `;
@@ -106,6 +108,12 @@ export class HUDManager {
             };
             container.appendChild(card);
         });
+
+        // Add bottom spacers to ensure the last items are visible
+        const spacer = document.createElement('div');
+        spacer.style.gridColumn = '1 / -1';
+        spacer.style.height = '150px';
+        container.appendChild(spacer);
     }
 
     renderPass() {
@@ -147,12 +155,28 @@ export class HUDManager {
             }
             container.appendChild(reward);
         });
+
+        const spacer = document.createElement('div');
+        spacer.style.height = '150px';
+        container.appendChild(spacer);
     }
 
     showLevelUpToast(level) {
         const el = document.createElement('div'); el.id = 'level-up-toast';
-        el.innerHTML = `<div class="toast-title">LEVEL UP</div><div>Tier ${level} reached!</div>`;
-        document.getElementById('game-container').appendChild(el);
-        setTimeout(() => el.remove(), 3000);
+        el.className = 'level-toast';
+        el.innerHTML = `<h3>LEVEL UP!</h3><p>New Height Reached!</p>`;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 2500);
+    }
+
+    showFloatingText(x, y, text, color = '#ffcc00') {
+        const el = document.createElement('div');
+        el.className = 'floating-game-text';
+        el.style.left = `${(x / CONFIG.canvasWidth) * 100}%`;
+        el.style.top = `${((y + this.game.cameraY) / (this.game.canvas.height / 1)) * 100}%`;
+        el.style.color = color;
+        el.innerText = text;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 800);
     }
 }

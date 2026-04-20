@@ -70,6 +70,8 @@ class Game {
         this.powerUsesSinceAd = 0;
         this.hasShield = false;
         this.shake = 0;
+        this.dashEffectTimer = 0;
+        this.lastGameOverY = null;
         this.ownedSkins = this._loadOwnedSkins();
         this.activeSkinId = localStorage.getItem('activeSkin') || 'default';
         if (!this.canUseSkin(this.activeSkinId)) {
@@ -167,13 +169,26 @@ class Game {
         const homeBtn = document.getElementById('home-button');
         if (homeBtn) homeBtn.onclick = () => { uiClick(); this.showMainMenu(); };
 
-        document.querySelectorAll('.difficulty-btn').forEach(btn => {
+        const diffHub = document.getElementById('difficulty-hub');
+        const diffOptions = document.getElementById('difficulty-options');
+        
+        const diffNames = { easy: 'EASY', medium: 'NORMAL', hard: 'HARD' };
+        if (diffHub) {
+            diffHub.innerText = diffNames[this.difficulty] || 'NORMAL';
+            diffHub.onclick = () => {
+                uiClick();
+                if (diffOptions) diffOptions.classList.toggle('hidden');
+            };
+        }
+
+        document.querySelectorAll('.hub-opt').forEach(btn => {
             btn.onclick = () => {
                 uiClick();
-                // Toggle active state
-                document.querySelectorAll('.difficulty-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.hub-opt').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 this.difficulty = btn.dataset.difficulty;
+                if (diffHub) diffHub.innerText = btn.innerText;
+                if (diffOptions) diffOptions.classList.add('hidden');
             };
         });
 
@@ -185,15 +200,54 @@ class Game {
             };
         }
 
-        document.getElementById('btn-shop').onclick = () => { uiClick(); document.getElementById('shop-screen').classList.remove('hidden'); };
-        document.getElementById('btn-pass').onclick = () => { uiClick(); document.getElementById('pass-screen').classList.remove('hidden'); };
+        const rewardMenu = document.getElementById('reward-menu');
+        const shopView = document.getElementById('shop-view');
+        const passView = document.getElementById('pass-view');
+        const tabBtns = document.querySelectorAll('.tab-btn');
+
+        const switchTab = (tab) => {
+            uiClick();
+            tabBtns.forEach(b => b.classList.toggle('active', b.id === `tab-${tab}`));
+            if (tab === 'shop') {
+                shopView.classList.remove('hidden');
+                passView.classList.add('hidden');
+                if(this.hud) this.hud.renderSkins();
+            } else {
+                shopView.classList.add('hidden');
+                passView.classList.remove('hidden');
+                if(this.hud) this.hud.renderPass();
+            }
+        };
+
+        if (document.getElementById('tab-shop')) document.getElementById('tab-shop').onclick = () => switchTab('shop');
+        if (document.getElementById('tab-pass')) document.getElementById('tab-pass').onclick = () => switchTab('pass');
+
+        const openRewards = (tab) => {
+            uiClick();
+            if (rewardMenu) rewardMenu.classList.remove('hidden');
+            document.querySelectorAll('.floating-nav').forEach(el => el.classList.add('hidden'));
+            document.getElementById('difficulty-screen').classList.add('hidden'); // Clean mode
+            switchTab(tab);
+        };
+
+        if (document.getElementById('btn-rewards-hub')) {
+            document.getElementById('btn-rewards-hub').onclick = () => openRewards('shop');
+        }
         
+        if (document.getElementById('btn-close-rewards')) {
+            document.getElementById('btn-close-rewards').onclick = () => {
+                uiClick();
+                rewardMenu.classList.add('hidden');
+                document.querySelectorAll('.floating-nav').forEach(el => el.classList.remove('hidden'));
+                document.getElementById('difficulty-screen').classList.remove('hidden');
+            };
+        }
+
         const exitBtn = document.getElementById('btn-exit-game');
         if (exitBtn) {
             exitBtn.onclick = (e) => {
                 if(e) e.stopPropagation();
                 uiClick();
-                console.log("Exit button clicked");
                 this.isGameOver = true;
                 this.gameState = 'MENU';
                 this.showMainMenu();
@@ -201,6 +255,7 @@ class Game {
         }
 
         document.querySelectorAll('.close-btn').forEach(btn => {
+            if (btn.id === 'btn-close-rewards') return;
             btn.onclick = () => { uiClick(); btn.parentElement.classList.add('hidden'); };
         });
 
@@ -245,7 +300,7 @@ class Game {
         document.getElementById('death-screen').classList.add('hidden');
         document.getElementById('ui-overlay').classList.add('hidden');
         document.getElementById('mobile-controls').classList.add('hidden');
-        document.getElementById('side-nav').classList.remove('hidden');
+        document.querySelectorAll('.floating-nav').forEach(el => el.classList.remove('hidden'));
         document.body.classList.add('menu-open');
         
         this.syncHomeScore();
@@ -268,11 +323,12 @@ class Game {
         this.isAdPlaying = false;
         this.jumpDebounce = false;
         this.shake = 0;
+        this.currentTheme = THEMES[Math.floor(Math.random() * THEMES.length)];
         
         document.getElementById('difficulty-screen').classList.add('hidden');
         document.getElementById('ui-overlay').classList.remove('hidden');
         document.getElementById('mobile-controls').classList.remove('hidden');
-        document.getElementById('side-nav').classList.add('hidden');
+        document.querySelectorAll('.floating-nav').forEach(el => el.classList.add('hidden'));
         document.body.classList.remove('menu-open');
         
         // Setup Physics World
@@ -335,17 +391,8 @@ class Game {
 
                 // 2. Coin Collection
                 if (otherLabel === 'coin') {
-                    if (this.worldManager.collectCoin) this.worldManager.collectCoin(otherBody);
-                    else {
-                        // Inline fallback if method missing
-                        this.coins++;
-                        this.totalCoinsAcc++;
-                        localStorage.setItem('coins', this.coins);
-                        localStorage.setItem('totalCoinsAcc', this.totalCoinsAcc);
-                        Matter.World.remove(this.world, otherBody);
-                        this.activeCoins = this.activeCoins.filter(c => c !== otherBody);
-                        this.pool.coin.push(otherBody);
-                        if (this.audioManager) this.audioManager.playCoin && this.audioManager.playCoin();
+                    if (this.worldManager.collectCoin) {
+                        this.worldManager.collectCoin(otherBody);
                     }
                 }
 
@@ -389,6 +436,7 @@ class Game {
 
     update() {
         if (this.isGameOver) return;
+        if (this.dashEffectTimer > 0) this.dashEffectTimer--;
         
         // --- MOVEMENT & INPUT ---
         this.inputManager.updateTilt();
@@ -499,6 +547,7 @@ class Game {
             return;
         }
 
+        this.lastGameOverY = this.player.position.y;
         console.log(`DEATH TRIGGERED! Reason: ${reason} | PlayerY: ${Math.round(this.player.position.y)} | LavaY: ${Math.round(this.lavaHeight)}`);
         this.isGameOver = true;
         this.gameState = 'GAME_OVER';
@@ -520,12 +569,36 @@ class Game {
         if (this.gameState === 'GAME_OVER') {
             this.isGameOver = false;
             this.gameState = 'PLAYING';
-            // Pop the player up slightly to prevent instant death and zero momentum
-            Body.setVelocity(this.player, { x: 0, y: 0 });
-            Body.setPosition(this.player, { x: this.player.position.x, y: this.player.position.y - 300 });
             
+            // Safe Revive Protocol
+            this.hasShield = true; // Give a shield immediately
+            this.dashEffectTimer = 60; // Show speed lines for brief reentry
+            this._isResettingCamera = true; // Snap camera to new position
+
+            // Reset momentum to zero
+            Body.setVelocity(this.player, { x: 0, y: 0 });
+            Body.setAngularVelocity(this.player, 0);
+
+            // Calculate safe position based on mode
+            const safeDistance = 350;
+            const moveDir = (this.modeStrategy.name === 'fall') ? 1 : -1;
+            const newY = this.player.position.y + (moveDir * safeDistance);
+            
+            Body.setPosition(this.player, { x: CONFIG.canvasWidth / 2, y: newY });
+            
+            // Create a temporary safety platform so they have somewhere to stand
+            const safetyPlatform = Body.create({
+                position: { x: CONFIG.canvasWidth / 2, y: newY + 100 },
+                parts: [Bodies.rectangle(CONFIG.canvasWidth / 2, newY + 100, 300, 20)],
+                isStatic: true,
+                label: 'platform',
+                render: { visible: false }
+            });
+            World.add(this.world, safetyPlatform);
+            this.platforms.push(safetyPlatform);
+
             // Push lava down immediately gives them time to land
-            this.lavaHeight = this.player.position.y + 600; 
+            this.lavaHeight = this.player.position.y + 700; 
 
             // Restore HUD
             document.getElementById('death-screen').classList.add('hidden');

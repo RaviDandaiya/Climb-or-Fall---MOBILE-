@@ -147,14 +147,15 @@ export class ClimbMode {
         }
         for (let i = game.platforms.length - 1; i >= 0; i--) {
             const p = game.platforms[i];
-            // Fix: Check label 'hazard' OR label 'pillar' if it was treated as hazard (though pillars aren't usually hazards in Climb)
-            if ((p.label === 'hazard' || p.isHazard) && p.position.y > viewTop && p.position.y < viewBottom) {
+            // Fix: Strict exclusion for pillars - they should NOT be removed by dash
+            if ((p.label === 'hazard' || p.isHazard) && p.label !== 'pillar' && p.position.y > viewTop && p.position.y < viewBottom) {
                 World.remove(game.world, p);
-                if (p.label === 'pillar') game.pool.pillar.push(p);
-                else game.pool.platform.push(p);
+                game.pool.platform.push(p);
                 game.createExplosion(p.position, '#ff2200', 30);
                 game.addXP(30);
                 game.platforms.splice(i, 1);
+                game.shake = 8;
+                if (game.hud) game.hud.showFloatingText(p.position.x, p.position.y, "CRASH!", "#ff0055");
             }
         }
     }
