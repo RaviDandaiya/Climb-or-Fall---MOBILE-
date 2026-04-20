@@ -55,7 +55,9 @@ class Game {
         
         this.cameraY = 0;
         this.score = 0;
-        this.bestHeight = parseInt(localStorage.getItem('bestHeight')) || 0;
+        this.bestHeight = parseInt(localStorage.getItem('bestHeight') ?? localStorage.getItem('bestScore')) || 0;
+        localStorage.setItem('bestHeight', this.bestHeight);
+        localStorage.setItem('bestScore', this.bestHeight);
         this.combo = 1;
         this.currentTheme = THEMES[0];
         this.coins = parseInt(localStorage.getItem('coins')) || 0;
@@ -65,10 +67,15 @@ class Game {
         this.dashCooldown = 0;
         this.maxDashCooldown = 0;
         this.isDashingFrames = 0;
-        this.powerUsesThisRun = 0;
+        this.powerUsesSinceAd = 0;
         this.hasShield = false;
         this.shake = 0;
+        this.ownedSkins = this._loadOwnedSkins();
         this.activeSkinId = localStorage.getItem('activeSkin') || 'default';
+        if (!this.canUseSkin(this.activeSkinId)) {
+            this.activeSkinId = 'default';
+            localStorage.setItem('activeSkin', this.activeSkinId);
+        }
         this.claimedRewards = JSON.parse(localStorage.getItem('claimedRewards') || '[]');
         this.playerName = localStorage.getItem('playerName') || 'Survivor';
 
@@ -103,9 +110,7 @@ class Game {
             this._bindAudioUnlock();
             
             // Initial high score display for home screen
-            if (document.getElementById('home-best-score')) {
-                document.getElementById('home-best-score').innerText = this.bestHeight;
-            }
+            this.syncHomeScore();
             
             const tick = () => {
                 try {
@@ -243,9 +248,7 @@ class Game {
         document.getElementById('side-nav').classList.remove('hidden');
         document.body.classList.add('menu-open');
         
-        // Update home screen score
-        const el = document.getElementById('home-best-score');
-        if (el) el.innerText = localStorage.getItem('bestScore') || 0;
+        this.syncHomeScore();
     }
 
     startGame(diff) {
@@ -257,11 +260,13 @@ class Game {
         this.combo = 1;
         this.isGameOver = false;
         this.gameState = 'PLAYING';
-        this.powerUsesThisRun = 0;
+        this.powerUsesSinceAd = 0;
         this.dashCooldown = 0;
         this.isDashingFrames = 0;
         this.hasShield = false;
         this.magnetTimer = 0;
+        this.isAdPlaying = false;
+        this.jumpDebounce = false;
         this.shake = 0;
         
         document.getElementById('difficulty-screen').classList.add('hidden');
@@ -293,35 +298,38 @@ class Game {
         
         if (this.audioManager) this.audioManager.playStart();
         this.setupCollisionDetection();
+        this.updatePowerButtonUI();
         this.hud.updateHUD();
     }
 
     setupCollisionDetection() {
         const { Events } = Matter;
-        Events.on(this.engine, 'collisionStart', (event) => {
-            if (this.isGameOver) return;
-            const pairs = event.pairs;
+        if (this._collisionHandler) {
+            Events.off(this.engine, 'collisionStart', this._collisionHandler);
+        }
 
-            for (let pair of pairs) {
+        this._collisionHandler = (event) => {
+            if (this.isGameOver) return;
+            for (const pair of event.pairs) {
                 const labels = [pair.bodyA.label, pair.bodyB.label];
                 const bodies = [pair.bodyA, pair.bodyB];
                 const playerIndex = labels.indexOf('player');
                 
                 if (playerIndex === -1) continue;
 
-                const playerBody = bodies[playerIndex];
                 const otherBody = bodies[1 - playerIndex];
                 const otherLabel = labels[1 - playerIndex];
+                const isEnemy = otherLabel === 'enemy' || otherLabel.startsWith('enemy');
 
                 // 1. Hazard / Enemy Collision
-                if (otherLabel === 'hazard' || otherLabel === 'enemy' || otherLabel === 'pillar' && otherBody.isHazard) {
+                if (otherLabel === 'hazard' || isEnemy || (otherLabel === 'pillar' && otherBody.isHazard)) {
                     if (this.isDashingFrames > 0 || this.hasShield) {
-                        if (otherLabel === 'enemy') {
+                        if (isEnemy) {
                             this.worldManager.destroyEnemy && this.worldManager.destroyEnemy(otherBody);
                         }
                         this.hasShield = false; 
                     } else {
-                        this.triggerDeath(otherLabel === 'enemy' ? "HIT AN ENEMY" : "TOUCHED A HAZARD");
+                        this.triggerDeath(isEnemy ? "HIT AN ENEMY" : "TOUCHED A HAZARD");
                     }
                 }
 
@@ -348,18 +356,17 @@ class Game {
                         // Inline fallback
                         const type = otherBody.powerupType;
                         if (type === 'shield') this.hasShield = true;
-                if (type === 'magnet') {
-                    this.magnetTimer = 600;
-                    if (this.audioManager) this.audioManager.playPowerup && this.audioManager.playPowerup();
-                }
+                        if (type === 'magnet') this.magnetTimer = 600;
                         Matter.World.remove(this.world, otherBody);
                         this.powerups = this.powerups.filter(p => p !== otherBody);
                         this.pool.powerup.push(otherBody);
-                        if (this.audioManager) this.audioManager.playPowerup && this.audioManager.playPowerup();
+                        if (this.audioManager?.playPowerup) this.audioManager.playPowerup();
                     }
                 }
             }
-        });
+        };
+
+        Events.on(this.engine, 'collisionStart', this._collisionHandler);
     }
 
     createPlayer() {
@@ -441,25 +448,16 @@ class Game {
         if (this.isDashingFrames > 0) this.isDashingFrames--;
         if (this.magnetTimer > 0) this.magnetTimer--; // Fixed: decrement magnet duration
 
-        // --- POWER DASH AD UI UPDATE ---
-        const powerBtn = document.getElementById('btn-power');
-        if (powerBtn) {
-            if (this.powerUsesThisRun > 0 && this.dashCooldown <= 0) {
-                powerBtn.classList.add('ad-required');
-                powerBtn.style.borderColor = '#ffcc00';
-            } else {
-                powerBtn.classList.remove('ad-required');
-                powerBtn.style.borderColor = '';
-            }
-        }
+        this.updatePowerButtonUI();
 
         // Power Dash (⚡)
-        if (this.inputManager.consume('PowerDash') && this.dashCooldown <= 0) {
+        const powerDashPressed = this.inputManager.consume('PowerDash');
+        if (powerDashPressed && this.dashCooldown <= 0) {
             const dashVx = this.player.velocity.x > 0 ? horizForce * 2 : -horizForce * 2;
-            if (this.powerUsesThisRun === 0) {
+            if (this.powerUsesSinceAd < 3) {
                 if (this.modeStrategy.handleDash) {
                     this.modeStrategy.handleDash(this, dashVx);
-                    this.powerUsesThisRun++;
+                    this.powerUsesSinceAd++;
                 }
             } else {
                 if (this.adManager) this.adManager.startPowerAd(dashVx);
@@ -476,6 +474,8 @@ class Game {
         if (this.score > this.bestHeight) {
             this.bestHeight = this.score;
             localStorage.setItem('bestHeight', this.bestHeight);
+            localStorage.setItem('bestScore', this.bestHeight);
+            this.syncHomeScore();
         }
 
         // --- PROGRESSION ---
@@ -538,6 +538,109 @@ class Game {
     addScoreBonus(amt) { this.score += amt; }
     createExplosion(pos, color, count) { this.particleSystem.createExplosion(pos, color, count); }
     createParticles(pos, color, count) { this.particleSystem.createExplosion(pos, color, count); }
+    playJump() { if (this.audioManager?.playJump) this.audioManager.playJump(); }
+    playPowerup() {
+        if (this.audioManager?.playPowerup) this.audioManager.playPowerup();
+        else if (this.audioManager?.playPowerPickup) this.audioManager.playPowerPickup();
+    }
+    _playTone(freq, type = 'sine', when = 0, duration = 0.08) {
+        if (this.audioManager?._playTone) this.audioManager._playTone(freq, type, when, duration);
+    }
+
+    claimReward(id) {
+        const reward = BATTLE_PASS.find((p) => p.id === id);
+        if (!reward || this.claimedRewards.includes(id) || !reward.isUnlocked(this)) return;
+
+        this.claimedRewards = [...this.claimedRewards, id];
+        this.coins += reward.rewardAmount;
+        this.totalCoinsAcc += reward.rewardAmount;
+
+        localStorage.setItem('claimedRewards', JSON.stringify(this.claimedRewards));
+        localStorage.setItem('coins', this.coins);
+        localStorage.setItem('totalCoinsAcc', this.totalCoinsAcc);
+
+        if (this.audioManager?.playLevelUp) this.audioManager.playLevelUp();
+        this.hud.updateHUD();
+        this.hud.renderPass();
+    }
+
+    syncHomeScore() {
+        const el = document.getElementById('home-best-score');
+        if (el) el.innerText = String(this.bestHeight);
+    }
+
+    updatePowerButtonUI() {
+        const powerBtn = document.getElementById('btn-power');
+        if (!powerBtn) return;
+
+        const overlay = powerBtn.querySelector('.dash-cooldown-overlay');
+        const isCoolingDown = this.dashCooldown > 0 && this.maxDashCooldown > 0;
+        const needsAd = !isCoolingDown && this.powerUsesSinceAd >= 3;
+        const rechargeProgress = isCoolingDown
+            ? Math.max(0, Math.min(1, 1 - (this.dashCooldown / this.maxDashCooldown)))
+            : 1;
+
+        powerBtn.classList.toggle('recharging', isCoolingDown);
+        powerBtn.classList.toggle('ad-required', needsAd);
+        powerBtn.disabled = isCoolingDown;
+        powerBtn.setAttribute('aria-disabled', String(isCoolingDown));
+
+        if (overlay) {
+            if (isCoolingDown) {
+                const darkAngle = (1 - rechargeProgress) * 360;
+                overlay.style.opacity = '1';
+                overlay.style.background = `conic-gradient(from -90deg, rgba(0, 0, 0, 0.72) 0deg ${darkAngle}deg, rgba(0, 0, 0, 0.06) ${darkAngle}deg 360deg)`;
+            } else {
+                overlay.style.opacity = '0';
+                overlay.style.background = '';
+            }
+        }
+    }
+
+    setActiveSkin(skinId) {
+        const skin = SKINS.find((s) => s.id === skinId) || SKINS[0];
+        if (!this.canUseSkin(skin.id)) return false;
+        this.activeSkinId = skin.id;
+        localStorage.setItem('activeSkin', skin.id);
+        if (this.hud) this.hud.renderSkins();
+        return true;
+    }
+
+    _loadOwnedSkins() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem('ownedSkins') || '["default"]');
+            const owned = Array.isArray(parsed) ? parsed.filter(Boolean) : ['default'];
+            return Array.from(new Set(['default', ...owned]));
+        } catch {
+            return ['default'];
+        }
+    }
+
+    isSkinOwned(skinId) {
+        return Array.isArray(this.ownedSkins) && this.ownedSkins.includes(skinId);
+    }
+
+    canUseSkin(skinId) {
+        const skin = SKINS.find((s) => s.id === skinId);
+        if (!skin) return false;
+        if (skin.unlockMode === 'coins') return this.isSkinOwned(skin.id);
+        return skin.isUnlocked(this);
+    }
+
+    purchaseSkin(skinId) {
+        const skin = SKINS.find((s) => s.id === skinId);
+        if (!skin || skin.unlockMode !== 'coins' || this.isSkinOwned(skin.id)) return false;
+        if (this.coins < skin.cost) return false;
+
+        this.coins -= skin.cost;
+        this.ownedSkins = Array.from(new Set([...this.ownedSkins, skin.id]));
+        localStorage.setItem('coins', this.coins);
+        localStorage.setItem('ownedSkins', JSON.stringify(this.ownedSkins));
+        if (this.audioManager?.playLevelUp) this.audioManager.playLevelUp();
+        this.setActiveSkin(skin.id);
+        this.hud.updateHUD();
+        return true;
+    }
 
     _bindAudioUnlock() {
         const unlock = () => {

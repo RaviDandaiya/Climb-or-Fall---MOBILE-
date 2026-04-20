@@ -11,6 +11,64 @@ export class Renderer {
         this.drawCachedPlatform();
     }
 
+    drawPlayerBody(ctx, skin, radius) {
+        const shape = skin.shape || 'round';
+        const bodyColor = skin.bodyColor || skin.color;
+
+        ctx.beginPath();
+        if (shape === 'flame') {
+            ctx.moveTo(0, -radius * 1.2);
+            ctx.bezierCurveTo(radius * 0.95, -radius * 0.65, radius * 0.95, radius * 0.25, 0, radius * 1.15);
+            ctx.bezierCurveTo(-radius * 0.95, radius * 0.25, -radius * 0.95, -radius * 0.65, 0, -radius * 1.2);
+            ctx.closePath();
+        } else if (shape === 'crystal') {
+            ctx.moveTo(0, -radius * 1.15);
+            ctx.lineTo(radius * 0.72, -radius * 0.45);
+            ctx.lineTo(radius * 1.05, 0);
+            ctx.lineTo(radius * 0.72, radius * 0.55);
+            ctx.lineTo(0, radius * 1.15);
+            ctx.lineTo(-radius * 0.72, radius * 0.55);
+            ctx.lineTo(-radius * 1.05, 0);
+            ctx.lineTo(-radius * 0.72, -radius * 0.45);
+            ctx.closePath();
+        } else if (shape === 'spike') {
+            const points = 10;
+            const outer = radius * 1.12;
+            const inner = radius * 0.62;
+            for (let i = 0; i < points * 2; i++) {
+                const angle = (Math.PI / points) * i - Math.PI / 2;
+                const r = i % 2 === 0 ? outer : inner;
+                const x = Math.cos(angle) * r;
+                const y = Math.sin(angle) * r;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+        } else if (shape === 'star') {
+            const points = 8;
+            const outer = radius * 1.15;
+            const inner = radius * 0.5;
+            for (let i = 0; i < points * 2; i++) {
+                const angle = (Math.PI / points) * i - Math.PI / 2;
+                const r = i % 2 === 0 ? outer : inner;
+                const x = Math.cos(angle) * r;
+                const y = Math.sin(angle) * r;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+        } else {
+            ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        }
+
+        const fill = ctx.createRadialGradient(-radius * 0.25, -radius * 0.35, radius * 0.1, 0, 0, radius * 1.2);
+        fill.addColorStop(0, '#0b0b12');
+        fill.addColorStop(0.65, bodyColor);
+        fill.addColorStop(1, '#050508');
+        ctx.fillStyle = fill;
+        ctx.fill();
+    }
+
     handleResize() {
         if (window.innerWidth === 0) return;
         this.canvas.width = window.innerWidth;
@@ -356,7 +414,11 @@ export class Renderer {
         ctx.restore();
 
         if (this.game.player) {
-            const skin = SKINS.find(s => s.id === this.game.activeSkinId);
+            const skin = SKINS.find(s => s.id === this.game.activeSkinId) || SKINS[0];
+            const bodyColor = skin.bodyColor || skin.color;
+            const strokeColor = skin.strokeColor || skin.color;
+            const eyeColor = skin.eyeColor || '#ffffff';
+            const glowColor = skin.glowColor || strokeColor;
             const velY = this.game.isGameOver ? 0 : Math.abs(this.game.player.velocity.y);
             const stretch = 1 + Math.min(0.3, velY / 40);
             const squash = 1 / stretch;
@@ -420,11 +482,10 @@ export class Renderer {
 
             ctx.save();
             ctx.rotate(this.game.player.angle);
-            ctx.beginPath();
-            ctx.arc(0, 0, CONFIG.playerRadius, 0, Math.PI * 2);
-            ctx.fillStyle = '#050508';
-            ctx.fill();
-            ctx.strokeStyle = skin.color;
+            this.drawPlayerBody(ctx, skin, CONFIG.playerRadius);
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = glowColor;
+            ctx.strokeStyle = strokeColor;
             ctx.lineWidth = 4;
             ctx.stroke();
             ctx.restore();
@@ -436,7 +497,7 @@ export class Renderer {
             const isBlinking = (time % 3500) < 150 || (velY < 0.5 && (time % 2000) < 100);
 
             if (isBlinking) {
-                ctx.strokeStyle = '#ffffff';
+                ctx.strokeStyle = eyeColor;
                 ctx.lineWidth = 3;
                 ctx.beginPath();
                 ctx.moveTo(-eyeSpacing - 4, -2);
@@ -448,12 +509,13 @@ export class Renderer {
                 ctx.beginPath();
                 ctx.ellipse(-eyeSpacing, -2, 5, 8.5, 0, 0, Math.PI * 2);
                 ctx.ellipse(eyeSpacing, -2, 5, 8.5, 0, 0, Math.PI * 2);
+                ctx.fillStyle = eyeColor;
                 ctx.fill();
             }
 
             // Removed blush cheeks to match the second image style.
 
-            ctx.strokeStyle = skin.color;
+            ctx.strokeStyle = strokeColor;
             ctx.lineWidth = 6;
             ctx.lineCap = 'round';
 

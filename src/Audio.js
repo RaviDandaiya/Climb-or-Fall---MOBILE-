@@ -44,6 +44,7 @@ export class AudioManager {
     playShield() { this._playTone(640, 'triangle', 0, 0.18); this._playTone(960, 'sine', 0.08, 0.14); }
     playMagnet() { this._playTone(420, 'sawtooth', 0, 0.16); this._playTone(220, 'sine', 0.05, 0.25); }
     playPowerPickup() { this._playTone(880, 'square', 0, 0.12); this._playTone(1320, 'sine', 0.06, 0.1); }
+    playPowerup() { this.playPowerPickup(); }
     playLavaWarning() { this._playTone(320, 'sawtooth', 0, 0.25); this._playTone(180, 'sine', 0.12, 0.25); }
     playUI() { this._playTone(640, 'triangle', 0, 0.06); }
     playStart() { this._playTone(760, 'sine', 0, 0.12); this._playTone(1040, 'triangle', 0.05, 0.1); }

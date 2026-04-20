@@ -67,6 +67,7 @@
 }
 
 .floating-power {
+    position: relative;
     width: 65px !important;
     height: 65px !important;
     background: linear-gradient(135deg, rgba(0, 209, 255, 0.2), rgba(157, 0, 255, 0.15)) !important;
@@ -86,6 +87,11 @@
     animation: energy-pulse 3s infinite;
 }
 
+.floating-power .btn-icon {
+    position: relative;
+    z-index: 2;
+}
+
 .floating-power:active {
     transform: scale(0.85);
     background: rgba(0, 209, 255, 0.6) !important;
@@ -102,6 +108,21 @@
     border-color: #ffcc00 !important;
     box-shadow: 0 0 15px rgba(255, 204, 0, 0.4), 0 5px 20px rgba(0, 0, 0, 0.3) !important;
     animation: pulse-gold 2s infinite;
+}
+
+.floating-power.recharging {
+    animation: none;
+    border-color: rgba(0, 209, 255, 0.25) !important;
+    box-shadow: 0 0 10px rgba(0, 209, 255, 0.18), 0 5px 20px rgba(0, 0, 0, 0.35) !important;
+    cursor: not-allowed;
+}
+
+.floating-power:disabled {
+    opacity: 1;
+}
+
+.floating-power.recharging .btn-icon {
+    animation: power-icon-spin 0.9s linear infinite;
 }
 
 .floating-power.ad-required::after {
@@ -126,13 +147,21 @@
     100% { box-shadow: 0 0 5px rgba(255, 204, 0, 0.4); }
 }
 
+@keyframes power-icon-spin {
+    from { transform: rotate(0deg) scale(0.96); }
+    50% { transform: rotate(180deg) scale(1.02); }
+    to { transform: rotate(360deg) scale(0.96); }
+}
+
 .dash-cooldown-overlay {
     position: absolute;
     inset: 0;
     background: rgba(0, 0, 0, 0.6);
     border-radius: 50%;
-    transform: scaleY(0);
-    transform-origin: bottom;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 1;
+    transition: opacity 0.12s linear;
 }
 
 @media (max-width: 480px) {

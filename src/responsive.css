@@ -1,5 +1,28 @@
 /* --- Mobile Responsive Fixes --- */
 @media (max-width: 768px) {
+    .screen-overlay {
+        padding: calc(56px + env(safe-area-inset-top, 0px)) 14px 18px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        touch-action: pan-y;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .close-btn {
+        top: 12px;
+        right: 12px;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        font-size: 2rem;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+    }
 
     /* HUD Adjustments */
     .hud-top-left {
@@ -89,6 +112,18 @@
         /* Disable 3D tilt on mobile */
     }
 
+    .difficulty-selector {
+        display: flex !important;
+        flex-direction: column !important;
+        grid-template-columns: none !important;
+        width: min(100%, 320px) !important;
+    }
+
+    .difficulty-selector .menu-btn {
+        width: 100%;
+        min-width: 0;
+    }
+
     .btn-desc {
         font-size: 0.6rem;
         opacity: 0.8;
@@ -96,34 +131,54 @@
 
     /* Death Screen Adjustments */
     .death-card {
-        padding: 30px 20px;
-        width: 95%;
-        border-radius: 28px;
+        padding: 24px 18px;
+        width: min(94vw, 420px);
+        border-radius: 26px;
     }
 
     .modern-death-title {
-        font-size: 2.8rem;
+        font-size: clamp(2.5rem, 12vw, 3.2rem);
+        letter-spacing: 3px;
+        margin-bottom: 10px;
+    }
+
+    .death-reason-text {
+        max-width: 100%;
+        padding: 7px 12px;
+        font-size: 0.78rem;
+    }
+
+    .death-stats-modern {
+        gap: 10px;
+        margin-bottom: 18px;
     }
 
     .death-stat-box {
-        padding: 12px 18px;
+        padding: 12px 14px;
+        border-radius: 18px;
     }
 
     .death-stat-icon {
-        font-size: 1.5rem;
-        margin-right: 15px;
+        font-size: 1.4rem;
+        margin-right: 12px;
     }
 
     .death-stat-value {
-        font-size: 1.6rem;
+        font-size: clamp(1.45rem, 7vw, 1.8rem);
+    }
+
+    .death-actions-modern {
+        grid-template-columns: minmax(0, 1fr) 64px;
+        gap: 10px;
     }
 
     .modern-btn {
-        padding: 14px 8px;
-        font-size: 0.75rem;
+        min-height: 54px;
+        padding: 14px 12px;
+        font-size: 0.78rem;
         border-radius: 16px;
-        gap: 5px;
-        letter-spacing: 0.5px;
+        gap: 8px;
+        letter-spacing: 0.6px;
     }
 
     .modern-btn .btn-icon {
@@ -131,15 +186,162 @@
     }
 
     .action-revive {
-        flex: 2;
-    }
-
-    .action-retry {
-        flex: 2;
+        min-height: 56px;
     }
 
     .action-home {
-        flex: 1;
+        min-width: 64px;
     }
 
+    .action-revive {
+        grid-area: revive;
+    }
+
+    .action-retry {
+        grid-area: retry;
+    }
+
+    .action-home {
+        grid-area: home;
+    }
+
+    #shop-screen .horror-title,
+    #pass-screen .horror-title {
+        font-size: clamp(1.55rem, 6vw, 2rem);
+        margin: 12px 0 10px;
+        text-align: center;
+    }
+
+    .skin-grid {
+        width: min(100%, 760px);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        padding: 14px;
+        max-height: calc(100vh - 180px);
+        border-radius: 22px;
+    }
+
+    .skin-card {
+        padding: 18px 10px 16px;
+        border-radius: 18px;
+    }
+
+    .skin-card h3 {
+        font-size: 0.88rem;
+        line-height: 1.1;
+    }
+
+    .skin-preview {
+        width: 50px;
+        height: 50px;
+        margin-bottom: 12px;
+    }
+
+    .unlock-task {
+        font-size: 0.68rem;
+        letter-spacing: 0.8px;
+    }
+
+    .task-progress-bar {
+        margin-bottom: 8px;
+    }
+
+    .pass-progress-container {
+        width: min(100%, 760px);
+        padding: 18px 16px;
+        border-radius: 22px;
+        margin-bottom: 14px;
+    }
+
+    .pass-rewards {
+        width: min(100%, 760px);
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        padding: 12px 4px 22px;
+        overflow: visible;
+        mask-image: none;
+    }
+
+    .reward-card {
+        min-width: 0;
+        padding: 18px 12px;
+        border-radius: 18px;
+    }
+
+    .premium-reward-card {
+        min-width: 0;
+    }
+
+}
+
+@media (max-width: 480px) {
+    .screen-overlay {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .death-card {
+        padding: 22px 14px;
+        width: min(95vw, 400px);
+    }
+
+    .death-stat-content {
+        gap: 8px;
+    }
+
+    .death-stat-label {
+        letter-spacing: 1px;
+        font-size: 0.72rem;
+    }
+
+    .death-actions-modern {
+        grid-template-columns: minmax(0, 1fr) 58px;
+        gap: 8px;
+    }
+
+    .modern-btn .btn-text {
+        font-size: 0.73rem;
+        line-height: 1;
+    }
+
+    .skin-grid {
+        grid-template-columns: 1fr;
+        width: min(100%, 420px);
+        gap: 10px;
+        padding: 12px;
+        max-height: calc(100vh - 170px);
+    }
+
+    .skin-card {
+        padding: 16px 12px 14px;
+    }
+
+    .skin-preview {
+        width: 46px;
+        height: 46px;
+    }
+
+    .pass-progress-container {
+        width: min(100%, 420px);
+        padding: 16px 14px;
+    }
+
+    .pass-rewards {
+        grid-template-columns: 1fr;
+        width: min(100%, 420px);
+        gap: 10px;
+    }
+
+    .reward-card {
+        padding: 16px 12px;
+    }
+
+    .close-btn {
+        top: 10px;
+        right: 10px;
+        width: 40px;
+        height: 40px;
+        font-size: 1.8rem;
+    }
 }

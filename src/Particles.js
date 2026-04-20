@@ -40,7 +40,7 @@ export class ParticleSystem {
             p.vx = (Math.random() - 0.5) * 2;
             p.vy = (Math.random() - 0.5) * 2;
             p.life = 1;
-            p.color = skin ? skin.color : '#ffffff';
+            p.color = skin ? (skin.trailColor || skin.color) : '#ffffff';
             this.particles.push(p);
         }
     }

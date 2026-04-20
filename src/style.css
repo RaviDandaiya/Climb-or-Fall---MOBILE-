@@ -401,13 +401,211 @@ body.menu-open #btn-exit-game {
   box-shadow: 0 0 30px rgba(157, 0, 255, 0.2);
 }
 
+.skin-card.buyable {
+  border-color: rgba(0, 209, 255, 0.35);
+  box-shadow: 0 0 24px rgba(0, 209, 255, 0.12);
+}
+
+.skin-card.owned {
+  border-color: rgba(0, 255, 163, 0.35);
+}
+
+.skin-card.buyable:hover {
+  border-color: rgba(0, 209, 255, 0.65);
+  box-shadow: 0 0 30px rgba(0, 209, 255, 0.22);
+}
+
 .skin-preview {
+  position: relative;
   width: 60px;
   height: 60px;
   border-radius: 50%;
   margin: 0 auto 15px;
   border: 3px solid rgba(255, 255, 255, 0.8);
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  animation: skinPreviewPulse 3s ease-in-out infinite;
+}
+
+.skin-preview::before {
+  content: '';
+  position: absolute;
+  inset: 18%;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.12);
+  filter: blur(0.5px);
+}
+
+.skin-preview::after {
+  content: '';
+  position: absolute;
+  inset: 38%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.45);
+  opacity: 0.75;
+}
+
+.skin-preview-eye {
+  position: absolute;
+  z-index: 2;
+  width: 7px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--preview-eye-color, #ffffff);
+  box-shadow:
+    0 0 6px rgba(255, 255, 255, 0.35),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18);
+  transform: translate(-50%, -50%);
+}
+
+.skin-preview-eye::after {
+  content: '';
+  position: absolute;
+  inset: 2px 1px 3px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.skin-preview-eye-left {
+  left: 36%;
+  top: 42%;
+}
+
+.skin-preview-eye-right {
+  left: 64%;
+  top: 42%;
+}
+
+@keyframes skinPreviewPulse {
+  0%, 100% { filter: brightness(1) saturate(1); box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); }
+  50% { filter: brightness(1.08) saturate(1.12); box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35); }
+}
+
+.skin-preview-round {
+  border-radius: 50%;
+}
+
+.skin-preview-flame {
+  border-radius: 55% 55% 50% 50% / 45% 45% 55% 55%;
+  transform: rotate(45deg) scale(0.9, 1.05);
+}
+
+.skin-preview-flame::before {
+  inset: 28% 24% 18% 24%;
+  border-radius: 50% 50% 55% 55%;
+  background: rgba(255, 255, 255, 0.15);
+  transform: rotate(-45deg);
+}
+
+.skin-preview-flame::after {
+  inset: 44%;
+  transform: rotate(-45deg);
+}
+
+.skin-preview-flame .skin-preview-eye {
+  width: 6px;
+  height: 8px;
+}
+
+.skin-preview-flame .skin-preview-eye-left {
+  left: 44%;
+  top: 36%;
+}
+
+.skin-preview-flame .skin-preview-eye-right {
+  left: 58%;
+  top: 50%;
+}
+
+.skin-preview-crystal {
+  border-radius: 12px;
+  clip-path: polygon(50% 0%, 84% 18%, 100% 50%, 84% 82%, 50% 100%, 16% 82%, 0% 50%, 16% 18%);
+}
+
+.skin-preview-crystal::before {
+  inset: 20% 18%;
+  clip-path: polygon(50% 0%, 85% 18%, 100% 50%, 85% 82%, 50% 100%, 15% 82%, 0% 50%, 15% 18%);
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.skin-preview-crystal::after {
+  inset: 42% 30%;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+}
+
+.skin-preview-crystal .skin-preview-eye {
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+}
+
+.skin-preview-crystal .skin-preview-eye-left {
+  left: 38%;
+  top: 38%;
+}
+
+.skin-preview-crystal .skin-preview-eye-right {
+  left: 62%;
+  top: 38%;
+}
+
+.skin-preview-spike {
+  border-radius: 14px;
+  clip-path: polygon(50% 0%, 61% 18%, 81% 7%, 76% 28%, 97% 33%, 80% 50%, 97% 67%, 76% 72%, 81% 93%, 61% 82%, 50% 100%, 39% 82%, 19% 93%, 24% 72%, 3% 67%, 20% 50%, 3% 33%, 24% 28%, 19% 7%, 39% 18%);
+}
+
+.skin-preview-spike::before {
+  inset: 22%;
+  clip-path: polygon(50% 0%, 63% 22%, 85% 15%, 76% 38%, 100% 50%, 76% 62%, 85% 85%, 63% 78%, 50% 100%, 37% 78%, 15% 85%, 24% 62%, 0% 50%, 24% 38%, 15% 15%, 37% 22%);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.skin-preview-spike::after {
+  inset: 40%;
+}
+
+.skin-preview-spike .skin-preview-eye {
+  width: 6px;
+  height: 8px;
+}
+
+.skin-preview-spike .skin-preview-eye-left {
+  left: 38%;
+  top: 40%;
+}
+
+.skin-preview-spike .skin-preview-eye-right {
+  left: 62%;
+  top: 40%;
+}
+
+.skin-preview-star {
+  clip-path: polygon(50% 0%, 61% 18%, 80% 10%, 73% 30%, 92% 39%, 74% 52%, 92% 65%, 73% 74%, 80% 94%, 61% 82%, 50% 100%, 39% 82%, 20% 94%, 27% 74%, 8% 65%, 26% 52%, 8% 39%, 27% 30%, 20% 10%, 39% 18%);
+}
+
+.skin-preview-star::before {
+  inset: 24%;
+  clip-path: polygon(50% 0%, 61% 21%, 85% 15%, 76% 36%, 100% 50%, 76% 64%, 85% 85%, 61% 79%, 50% 100%, 39% 79%, 15% 85%, 24% 64%, 0% 50%, 24% 36%, 15% 15%, 39% 21%);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.skin-preview-star::after {
+  inset: 40%;
+}
+
+.skin-preview-star .skin-preview-eye {
+  width: 6px;
+  height: 6px;
+}
+
+.skin-preview-star .skin-preview-eye-left {
+  left: 38%;
+  top: 36%;
+}
+
+.skin-preview-star .skin-preview-eye-right {
+  left: 62%;
+  top: 36%;
 }
 
 .pass-progress-container {
@@ -505,6 +703,14 @@ body.menu-open #btn-exit-game {
 }
 
 .unlocked-text {
+  color: #00ff88;
+}
+
+.skin-card.buyable .unlock-task {
+  color: #00d1ff;
+}
+
+.skin-card.owned .unlock-task {
   color: #00ff88;
 }
 
@@ -1057,8 +1263,7 @@ body.menu-open .screen-overlay {
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8), inset 0 0 40px rgba(157, 0, 255, 0.1);
   transform: translateY(0) scale(1);
   animation: deathCardIn 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.15) forwards;
-  max-width: 90%;
-  width: 400px;
+  width: min(92vw, 430px);
   position: relative;
   overflow: hidden;
 }
@@ -1090,15 +1295,15 @@ body.menu-open .screen-overlay {
   position: relative;
   z-index: 1;
   text-align: center;
-  margin-bottom: 35px;
+  margin-bottom: 24px;
   width: 100%;
 }
 
 .modern-death-title {
   font-family: var(--font-horror);
   font-weight: normal;
-  font-size: 3.8rem;
-  letter-spacing: 5px;
+  font-size: clamp(3rem, 11vw, 4rem);
+  letter-spacing: clamp(2px, 0.9vw, 5px);
   background: linear-gradient(180deg, #fff 0%, #ff3e3e 100%);
   -webkit-background-clip: text;
   background-clip: text;
@@ -1116,8 +1321,8 @@ body.menu-open .screen-overlay {
 .death-reason-text {
   font-family: var(--font-main);
   color: rgba(255, 255, 255, 0.7);
-  font-size: 1rem;
-  letter-spacing: 1.5px;
+  font-size: clamp(0.82rem, 3vw, 1rem);
+  letter-spacing: 1px;
   text-transform: uppercase;
   font-weight: 700;
   background: rgba(0, 0, 0, 0.3);
@@ -1130,9 +1335,9 @@ body.menu-open .screen-overlay {
 .death-stats-modern {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 12px;
   width: 100%;
-  margin-bottom: 35px;
+  margin-bottom: 24px;
   z-index: 1;
 }
 
@@ -1142,7 +1347,7 @@ body.menu-open .screen-overlay {
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
-  padding: 16px 24px;
+  padding: 15px 18px;
   transition: transform 0.3s ease, border-color 0.3s ease;
   animation: statIn 0.5s ease backwards;
 }
@@ -1176,6 +1381,7 @@ body.menu-open .screen-overlay {
   justify-content: space-between;
   align-items: center;
   flex: 1;
+  gap: 12px;
 }
 
 .death-stat-label {
@@ -1186,7 +1392,7 @@ body.menu-open .screen-overlay {
 }
 
 .death-stat-value {
-  font-size: 2rem;
+  font-size: clamp(1.7rem, 7vw, 2.2rem);
   font-weight: 900;
   color: #fff;
   letter-spacing: -1px;
@@ -1211,8 +1417,12 @@ body.menu-open .screen-overlay {
 }
 
 .death-actions-modern {
-  display: flex;
-  gap: 15px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px;
+  grid-template-areas:
+    "revive revive"
+    "retry home";
+  gap: 12px;
   width: 100%;
   z-index: 1;
   animation: actionsIn 0.5s 0.8s ease backwards;
@@ -1256,7 +1466,31 @@ body.menu-open .screen-overlay {
   font-size: 1.3rem;
 }
 
+.modern-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-family: var(--font-main);
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease, border-color 0.25s ease;
+}
+
+.modern-btn .btn-text {
+  white-space: nowrap;
+}
+
 .action-retry {
+  grid-area: retry;
   flex: 1.2;
   background: rgba(255, 255, 255, 0.05);
   color: #fff;
@@ -1276,11 +1510,16 @@ body.menu-open .screen-overlay {
 }
 
 .action-home {
+  grid-area: home;
   flex: 1;
   background: rgba(255, 255, 255, 0.05);
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  padding: 20px 0;
+  padding: 0;
+  min-width: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .action-home:hover {
@@ -1294,11 +1533,15 @@ body.menu-open .screen-overlay {
 }
 
 .action-revive {
-  display: none; /* Block will be set by JS */
-  flex: 1.5;
+  grid-area: revive;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   background: linear-gradient(135deg, #00ff88 0%, #00cc6c 100%);
   color: #000;
   border: none;
+  min-height: 58px;
   box-shadow: 0 10px 25px rgba(0, 255, 136, 0.3);
 }
 
@@ -2015,5 +2258,3 @@ body.menu-open .screen-overlay {
     0%, 20% { left: -100%; }
     100% { left: 200%; }
 }
-
-

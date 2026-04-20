@@ -29,7 +29,67 @@ export const SKINS = [
     { id: 'xmas', name: 'SANTA', color: '#ff0044', reqType: 'gamesPlayed', reqValue: 10, desc: 'Play 10 Games', isUnlocked: (game) => game.gamesPlayed >= 10 },
     { id: 'ghost', name: 'PHANTOM', color: '#ffffff', reqType: 'bestHeight', reqValue: 1000, desc: 'Reach 1000 Height', isUnlocked: (game) => game.bestHeight >= 1000 },
     { id: 'blood', name: 'VAMPIRE', color: '#880000', reqType: 'totalCoinsAcc', reqValue: 500, desc: 'Collect 500 Total Coins', isUnlocked: (game) => game.totalCoinsAcc >= 500 },
-    { id: 'ocean', name: 'ABYSS', color: '#0055ff', reqType: 'bestHeight', reqValue: 2000, desc: 'Reach 2000 Height', isUnlocked: (game) => game.bestHeight >= 2000 }
+    { id: 'ocean', name: 'ABYSS', color: '#0055ff', reqType: 'bestHeight', reqValue: 2000, desc: 'Reach 2000 Height', isUnlocked: (game) => game.bestHeight >= 2000 },
+    {
+        id: 'ember',
+        name: 'EMBER',
+        color: '#ff6a00',
+        shape: 'flame',
+        bodyColor: '#ff7a1a',
+        strokeColor: '#ffd166',
+        eyeColor: '#fff2c2',
+        glowColor: '#ff8a00',
+        trailColor: '#ff6a00',
+        unlockMode: 'coins',
+        cost: 1200,
+        desc: 'Buy for 1200 Coins',
+        isUnlocked: (game) => game.isSkinOwned ? game.isSkinOwned('ember') : false
+    },
+    {
+        id: 'glacier',
+        name: 'GLACIER',
+        color: '#39c7ff',
+        shape: 'crystal',
+        bodyColor: '#7de0ff',
+        strokeColor: '#d6fbff',
+        eyeColor: '#efffff',
+        glowColor: '#00d1ff',
+        trailColor: '#7de0ff',
+        unlockMode: 'coins',
+        cost: 1800,
+        desc: 'Buy for 1800 Coins',
+        isUnlocked: (game) => game.isSkinOwned ? game.isSkinOwned('glacier') : false
+    },
+    {
+        id: 'thorn',
+        name: 'THORN',
+        color: '#8dff6a',
+        shape: 'spike',
+        bodyColor: '#56d94a',
+        strokeColor: '#eaffbf',
+        eyeColor: '#f2ffe4',
+        glowColor: '#62ff76',
+        trailColor: '#6dff58',
+        unlockMode: 'coins',
+        cost: 2400,
+        desc: 'Buy for 2400 Coins',
+        isUnlocked: (game) => game.isSkinOwned ? game.isSkinOwned('thorn') : false
+    },
+    {
+        id: 'nova',
+        name: 'NOVA',
+        color: '#ff68d8',
+        shape: 'star',
+        bodyColor: '#ff8ceb',
+        strokeColor: '#fff0ff',
+        eyeColor: '#fff7ff',
+        glowColor: '#ff49e1',
+        trailColor: '#ff8ce7',
+        unlockMode: 'coins',
+        cost: 3200,
+        desc: 'Buy for 3200 Coins',
+        isUnlocked: (game) => game.isSkinOwned ? game.isSkinOwned('nova') : false
+    }
 ];
 
 export const BATTLE_PASS = [

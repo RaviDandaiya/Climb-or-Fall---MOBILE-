@@ -86,7 +86,7 @@ export class AdManager {
 
         const grantPower = () => {
             game.isAdPlaying = false;
-            game.powerUsesThisRun++;
+            game.powerUsesSinceAd = 0;
             if (game.modeStrategy.handleDash) game.modeStrategy.handleDash(game, targetVx);
         };
 

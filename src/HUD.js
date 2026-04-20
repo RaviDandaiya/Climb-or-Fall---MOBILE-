@@ -9,7 +9,8 @@ export class HUDManager {
         if (document.getElementById('coin-count')) document.getElementById('coin-count').innerText = this.game.coins;
         if (document.getElementById('height-value')) document.getElementById('height-value').innerText = this.game.score;
         if (document.getElementById('best-value')) document.getElementById('best-value').innerText = this.game.bestHeight;
-        if (document.getElementById('home-best-score')) document.getElementById('home-best-score').innerText = this.game.bestHeight;
+        if (typeof this.game.syncHomeScore === 'function') this.game.syncHomeScore();
+        else if (document.getElementById('home-best-score')) document.getElementById('home-best-score').innerText = this.game.bestHeight;
         if (document.getElementById('combo-value')) document.getElementById('combo-value').innerText = this.game.combo;
         
         // Update death screen if visible
@@ -43,12 +44,27 @@ export class HUDManager {
         if (!container) return;
         container.innerHTML = '';
         SKINS.forEach(skin => {
-            const isUnlocked = skin.isUnlocked(this.game);
+            const isCoinSkin = skin.unlockMode === 'coins';
+            const isOwned = isCoinSkin ? this.game.isSkinOwned(skin.id) : skin.isUnlocked(this.game);
+            const canBuy = isCoinSkin && !isOwned && this.game.coins >= skin.cost;
+            const isUnlocked = isOwned;
             const card = document.createElement('div');
-            card.className = `skin-card premium-skin-card ${this.game.activeSkinId === skin.id ? 'selected' : ''} ${!isUnlocked ? 'locked' : ''}`;
+            card.className = `skin-card premium-skin-card ${this.game.activeSkinId === skin.id ? 'selected' : ''} ${isCoinSkin && !isOwned ? 'locked' : ''} ${canBuy ? 'buyable' : ''} ${isOwned ? 'owned' : ''}`;
             
             let statusHTML = '';
-            if(!isUnlocked) {
+            if (isCoinSkin) {
+                if (isOwned) {
+                    statusHTML = `<div class="unlock-task unlocked-text">OWNED</div>`;
+                } else {
+                    const shortfall = Math.max(0, skin.cost - this.game.coins);
+                    const progress = skin.cost > 0 ? Math.min(100, Math.floor((this.game.coins / skin.cost) * 100)) : 0;
+                    statusHTML = canBuy
+                        ? `<div class="unlock-task unlocked-text">BUY ${skin.cost} COINS</div>
+                           <div class="task-progress-bar"><div class="task-progress-fill" style="width:${progress}%"></div></div>`
+                        : `<div class="unlock-task">${shortfall} MORE COINS</div>
+                           <div class="task-progress-bar"><div class="task-progress-fill" style="width:${progress}%"></div></div>`;
+                }
+            } else if(!isUnlocked) {
                 let progress = 0;
                 if(skin.reqType === 'gamesPlayed') progress = (this.game.gamesPlayed / skin.reqValue);
                 else if(skin.reqType === 'bestHeight') progress = (this.game.bestHeight / skin.reqValue);
@@ -62,16 +78,28 @@ export class HUDManager {
                 statusHTML = `<div class="unlock-task unlocked-text">UNLOCKED</div>`;
             }
 
+            const previewShape = skin.shape || 'round';
+            const previewColor = skin.bodyColor || skin.color;
+            const previewEyeColor = skin.eyeColor || '#ffffff';
             card.innerHTML = `
                 ${statusHTML}
-                <div class="skin-preview" style="background: ${skin.color}"></div>
+                <div class="skin-preview skin-preview-${previewShape}" style="background: ${previewColor}; --preview-eye-color: ${previewEyeColor};">
+                    <span class="skin-preview-eye skin-preview-eye-left"></span>
+                    <span class="skin-preview-eye skin-preview-eye-right"></span>
+                </div>
                 <h3>${skin.name}</h3>
             `;
             card.onclick = () => {
-                if(isUnlocked) {
-                    this.game.activeSkinId = skin.id; 
-                    localStorage.setItem('activeSkin', skin.id);
-                    this.renderSkins();
+                if (isCoinSkin) {
+                    if (isOwned) {
+                        this.game.setActiveSkin(skin.id);
+                    } else if (canBuy) {
+                        this.game.purchaseSkin(skin.id);
+                    } else {
+                        this.game._playTone(150, 'sawtooth', 0, 0.1); // Error tone
+                    }
+                } else if(isUnlocked) {
+                    this.game.setActiveSkin(skin.id);
                 } else {
                     this.game._playTone(150, 'sawtooth', 0, 0.1); // Error tone
                 }

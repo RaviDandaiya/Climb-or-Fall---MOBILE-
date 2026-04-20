@@ -81,7 +81,7 @@ export class WorldManager {
         }
         pillar.isMoving = false;
 
-        if (game.maxHeight > 500 && Math.random() < 0.6) {
+        if (game.score > 500 && Math.random() < 0.6) {
             pillar.isMoving = true;
             pillar.moveSpeed = (Math.random() < 0.5 ? 1 : -1) * (1.5 + Math.random() * 2);
             pillar.minX = 40;
