@@ -1,8 +1,3 @@
-/**
- * main.js — Game entry point.
- * Orchestrates all managers; each system lives in its own module.
- */
-
 import Matter from 'matter-js';
 import { CONFIG, THEMES, DIFFICULTY_SETTINGS, SKINS, BATTLE_PASS } from './constants.js';
 import { AudioManager } from './Audio.js';
@@ -88,6 +83,12 @@ class Game {
         this.lavaHeight = 2000;
         this.sensitivity = parseFloat(localStorage.getItem('sensitivity') || '1');
         this.controlMode = localStorage.getItem('controlMode') || 'touch';
+        
+        // --- New Audio & Haptic State ---
+        this.soundOn = (localStorage.getItem('soundOn') !== 'false');
+        this.musicOn = (localStorage.getItem('musicOn') !== 'false');
+        this.vibrateOn = (localStorage.getItem('vibrateOn') !== 'false');
+
         this.stage = 0; // Initialize stage for difficulty progression
 
         this.particleSystem = new ParticleSystem();
@@ -111,13 +112,9 @@ class Game {
             this.adManager.init();
             this._bindAudioUnlock();
             
-            // Initial high score display for home screen
-            this.syncHomeScore();
-            
             const tick = () => {
                 try {
                     if (this.gameState === 'PLAYING' && !this.isGameOver && !this.isAdPlaying) {
-                        // Sub-stepping for Continuous Collision Detection (CCD) feel and stability
                         const substeps = 6;
                         const stepSize = 16.666 / substeps;
                         for (let i = 0; i < substeps; i++) {
@@ -134,21 +131,47 @@ class Game {
             requestAnimationFrame(tick);
 
             this.renderer = new Renderer(this);
-            try { this.audioManager = new AudioManager(); } catch (err) { console.warn('Audio Init Failed', err); }
+            try { 
+                this.audioManager = new AudioManager(); 
+                if (this.audioManager) {
+                    this.audioManager.soundOn = this.soundOn;
+                    this.audioManager.musicOn = this.musicOn;
+                    if (this.musicOn) this.audioManager.playMusic();
+                }
+            } catch (err) { console.warn('Audio Init Failed', err); }
 
             this.hud.updateHUD();
             this.hud.renderSkins();
             this.hud.renderPass();
-            this.showMainMenu();
+            this.showMainMenu(); // Sets up initial UI state
             console.log("Game Init Sequence Complete");
         } catch (e) {
             console.error('Fatal Init Error:', e);
-            this.showMenuOverlay();
+            this.showMainMenu();
         }
     }
 
     setupUIListeners() {
         const uiClick = () => { if(this.audioManager) { this.audioManager.resume(); this.audioManager.playUI(); } };
+        
+        const registerImmediateClick = (id, callback) => {
+            const el = document.getElementById(id);
+            if (el) {
+                let lastTime = 0;
+                const handler = (e) => {
+                    const now = Date.now();
+                    if (now - lastTime < 400) return; // Prevent double-triggers/ghost clicks
+                    lastTime = now;
+                    
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log(`UI Exec: ${id}`);
+                    callback(e);
+                };
+                el.onpointerdown = handler;
+                el.onclick = handler;
+            }
+        };
         
         document.getElementById('retry-button').onclick = () => {
             uiClick();
@@ -182,23 +205,23 @@ class Game {
         }
 
         document.querySelectorAll('.hub-opt').forEach(btn => {
-            btn.onclick = () => {
+            const diffId = `diff-${btn.dataset.difficulty}`;
+            btn.id = btn.id || diffId; // Ensure id for registerImmediateClick
+            registerImmediateClick(btn.id, () => {
                 uiClick();
                 document.querySelectorAll('.hub-opt').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 this.difficulty = btn.dataset.difficulty;
-                if (diffHub) diffHub.innerText = btn.innerText;
-                if (diffOptions) diffOptions.classList.add('hidden');
-            };
+                if (document.getElementById('difficulty-hub')) {
+                    document.getElementById('difficulty-hub').innerText = btn.innerText;
+                }
+            });
         });
 
-        const startRunBtn = document.getElementById('btn-start-run');
-        if (startRunBtn) {
-            startRunBtn.onclick = () => {
-                uiClick();
-                this.startGame(this.difficulty || 'medium');
-            };
-        }
+        registerImmediateClick('btn-start-run', () => {
+            uiClick();
+            this.startGame(this.difficulty || 'medium');
+        });
 
         const rewardMenu = document.getElementById('reward-menu');
         const shopView = document.getElementById('shop-view');
@@ -225,23 +248,111 @@ class Game {
         const openRewards = (tab) => {
             uiClick();
             if (rewardMenu) rewardMenu.classList.remove('hidden');
-            document.querySelectorAll('.floating-nav').forEach(el => el.classList.add('hidden'));
+            document.getElementById('home-header').classList.add('hidden');
+            document.querySelectorAll('.floating-fab').forEach(el => el.classList.add('hidden'));
             document.getElementById('difficulty-screen').classList.add('hidden'); // Clean mode
             switchTab(tab);
         };
 
         if (document.getElementById('btn-rewards-hub')) {
-            document.getElementById('btn-rewards-hub').onclick = () => openRewards('shop');
+            registerImmediateClick('btn-rewards-hub', () => {
+                console.log("Opening Rewards Hub...");
+                const rMenu = document.getElementById('reward-menu');
+                if (rMenu) rMenu.classList.remove('hidden');
+                uiClick();
+                document.getElementById('home-header').classList.add('hidden');
+                document.getElementById('difficulty-screen').classList.add('hidden');
+                switchTab('shop');
+            });
         }
         
-        if (document.getElementById('btn-close-rewards')) {
-            document.getElementById('btn-close-rewards').onclick = () => {
-                uiClick();
-                rewardMenu.classList.add('hidden');
-                document.querySelectorAll('.floating-nav').forEach(el => el.classList.remove('hidden'));
-                document.getElementById('difficulty-screen').classList.remove('hidden');
-            };
+
+        const settingsMenu = document.getElementById('settings-screen');
+        const openSettings = () => {
+            uiClick();
+            if (settingsMenu) settingsMenu.classList.remove('hidden');
+            document.getElementById('home-header').classList.add('hidden');
+            document.querySelectorAll('.floating-fab').forEach(el => el.classList.add('hidden'));
+            document.getElementById('difficulty-screen').classList.add('hidden');
+        };
+
+        if (document.getElementById('btn-settings-hub')) {
+            document.getElementById('btn-settings-hub').onclick = openSettings;
         }
+
+        document.querySelectorAll('.close-btn').forEach(btn => {
+            const handler = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uiClick(); 
+                this.showMainMenu(); 
+            };
+            btn.onpointerdown = handler;
+            btn.onclick = handler;
+        });
+
+        // Mode Toggles (Climb vs Fall)
+        const climbBtn = document.getElementById('mode-climb');
+        const fallBtn = document.getElementById('mode-fall');
+        
+        if (climbBtn) climbBtn.onclick = () => {
+            uiClick();
+            this.setGameMode('climb');
+        };
+        // Fall is disabled by default in HTML, but we add listener for future-proofing
+        if (fallBtn) fallBtn.onclick = () => {
+             if (fallBtn.classList.contains('disabled')) return;
+             uiClick();
+             this.setGameMode('fall');
+        };
+
+        // Control Toggles (Touch vs Tilt)
+        const touchBtn = document.getElementById('btn-touch-mode');
+        const tiltBtn = document.getElementById('btn-tilt-mode');
+        
+        const updateControlUI = () => {
+            if (touchBtn) touchBtn.classList.toggle('active', this.controlMode === 'touch');
+            if (tiltBtn) tiltBtn.classList.toggle('active', this.controlMode === 'tilt');
+        };
+        updateControlUI();
+
+        if (touchBtn) touchBtn.onclick = () => {
+            uiClick();
+            this.controlMode = 'touch';
+            localStorage.setItem('controlMode', 'touch');
+            updateControlUI();
+        };
+        if (tiltBtn) tiltBtn.onclick = () => {
+            uiClick();
+            this.controlMode = 'tilt';
+            localStorage.setItem('controlMode', 'tilt');
+            updateControlUI();
+        };
+
+        // --- New Premium Header Listeners ---
+        const statsMenu = document.getElementById('stats-screen');
+
+        registerImmediateClick('btn-stats-hub', () => {
+            console.log("Opening Stats Hub...");
+            const sMenu = document.getElementById('stats-screen');
+            if (sMenu) sMenu.classList.remove('hidden');
+            uiClick();
+            this.syncStats();
+            document.getElementById('home-header').classList.add('hidden');
+            document.getElementById('difficulty-screen').classList.add('hidden');
+        });
+
+
+        registerImmediateClick('btn-settings-hub', () => {
+            console.log("Opening Settings Hub...");
+            const setMenu = document.getElementById('settings-screen');
+            if (setMenu) setMenu.classList.remove('hidden');
+            uiClick();
+            document.getElementById('home-header').classList.add('hidden');
+            document.getElementById('difficulty-screen').classList.add('hidden');
+        });
+
+
 
         const exitBtn = document.getElementById('btn-exit-game');
         if (exitBtn) {
@@ -255,8 +366,8 @@ class Game {
         }
 
         document.querySelectorAll('.close-btn').forEach(btn => {
-            if (btn.id === 'btn-close-rewards') return;
-            btn.onclick = () => { uiClick(); btn.parentElement.classList.add('hidden'); };
+            if (btn.id === 'btn-close-rewards' || btn.id === 'btn-close-settings' || btn.id === 'btn-close-stats' || btn.id === 'btn-close-leaderboard') return;
+            btn.onclick = () => { uiClick(); if(btn.parentElement) { btn.parentElement.classList.add('hidden'); this.showMainMenu(); } };
         });
 
         const nameInput = document.getElementById('player-name-input');
@@ -265,6 +376,7 @@ class Game {
             nameInput.oninput = (e) => {
                 this.playerName = e.target.value || 'Survivor';
                 localStorage.setItem('playerName', this.playerName);
+                this.syncHomeProfile(); // Update header real-time
             };
         }
 
@@ -279,6 +391,56 @@ class Game {
                 if(sensValue) sensValue.innerText = `${Math.round(this.sensitivity * 100)}%`;
             };
         }
+
+        // Audio & Haptic Toggles
+        const soundBtn = document.getElementById('toggle-sound');
+        const musicBtn = document.getElementById('toggle-music');
+        const vibrateBtn = document.getElementById('toggle-vibrate');
+
+        const updateAudioUI = () => {
+             if (soundBtn) {
+                 soundBtn.innerText = this.soundOn ? 'ON' : 'OFF';
+                 soundBtn.classList.toggle('active', this.soundOn);
+                 soundBtn.classList.toggle('off', !this.soundOn);
+                 if (this.audioManager) this.audioManager.soundOn = this.soundOn;
+             }
+             if (musicBtn) {
+                 musicBtn.innerText = this.musicOn ? 'ON' : 'OFF';
+                 musicBtn.classList.toggle('active', this.musicOn);
+                 musicBtn.classList.toggle('off', !this.musicOn);
+                 if (this.audioManager) {
+                     this.audioManager.musicOn = this.musicOn;
+                     if (this.musicOn) this.audioManager.playMusic();
+                     else this.audioManager.stopMusic();
+                 }
+             }
+             if (vibrateBtn) {
+                 vibrateBtn.innerText = this.vibrateOn ? 'ON' : 'OFF';
+                 vibrateBtn.classList.toggle('active', this.vibrateOn);
+                 vibrateBtn.classList.toggle('off', !this.vibrateOn);
+             }
+        };
+        updateAudioUI();
+
+        if (soundBtn) soundBtn.onclick = () => {
+             uiClick();
+             this.soundOn = !this.soundOn;
+             localStorage.setItem('soundOn', this.soundOn);
+             updateAudioUI();
+        };
+        if (musicBtn) musicBtn.onclick = () => {
+             uiClick();
+             this.musicOn = !this.musicOn;
+             localStorage.setItem('musicOn', this.musicOn);
+             updateAudioUI();
+        };
+        if (vibrateBtn) vibrateBtn.onclick = () => {
+             uiClick();
+             this.vibrateOn = !this.vibrateOn;
+             localStorage.setItem('vibrateOn', this.vibrateOn);
+             updateAudioUI();
+             if (this.vibrateOn && navigator.vibrate) navigator.vibrate(50);
+        };
     }
 
     handleResize() {
@@ -286,6 +448,12 @@ class Game {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
         if (this.renderer) this.renderer.handleResize();
+    }
+
+    vibrate(ms = 50) {
+        if (this.vibrateOn && navigator.vibrate) {
+            navigator.vibrate(ms);
+        }
     }
 
     showMenuOverlay() {
@@ -296,14 +464,38 @@ class Game {
     showMainMenu() {
         this.gameState = 'MENU';
         this.isGameOver = true;
-        this.showMenuOverlay();
-        document.getElementById('death-screen').classList.add('hidden');
-        document.getElementById('ui-overlay').classList.add('hidden');
-        document.getElementById('mobile-controls').classList.add('hidden');
-        document.querySelectorAll('.floating-nav').forEach(el => el.classList.remove('hidden'));
-        document.body.classList.add('menu-open');
         
+        // Hide EVERYTHING overlay-related
+        const overlays = ['death-screen', 'ui-overlay', 'mobile-controls', 'reward-menu', 'settings-screen', 'stats-screen', 'leaderboard-screen', 'difficulty-screen'];
+        overlays.forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.classList.add('hidden');
+        });
+
+        // Show Home Core UI
+        const homeHeader = document.getElementById('home-header');
+        const diffScreen = document.getElementById('difficulty-screen');
+        if (homeHeader) homeHeader.classList.remove('hidden');
+        if (diffScreen) diffScreen.classList.remove('hidden');
+        
+        document.querySelectorAll('.floating-fab').forEach(el => el.classList.remove('hidden'));
+        document.body.classList.add('menu-open');
+
         this.syncHomeScore();
+        this.syncHomeProfile();
+        
+        const fallBtn = document.getElementById('mode-fall');
+        if (fallBtn) {
+            if (this.bestHeight >= 500) {
+                fallBtn.classList.remove('disabled');
+                fallBtn.disabled = false;
+                fallBtn.innerText = 'FALL';
+            } else {
+                fallBtn.classList.add('disabled');
+                fallBtn.disabled = true;
+                fallBtn.innerText = 'FALL 🔒';
+            }
+        }
     }
 
     startGame(diff) {
@@ -328,7 +520,8 @@ class Game {
         document.getElementById('difficulty-screen').classList.add('hidden');
         document.getElementById('ui-overlay').classList.remove('hidden');
         document.getElementById('mobile-controls').classList.remove('hidden');
-        document.querySelectorAll('.floating-nav').forEach(el => el.classList.add('hidden'));
+        document.getElementById('home-header').classList.add('hidden');
+        document.querySelectorAll('.floating-fab').forEach(el => el.classList.add('hidden'));
         document.body.classList.remove('menu-open');
         
         // Setup Physics World
@@ -393,13 +586,16 @@ class Game {
                 if (otherLabel === 'coin') {
                     if (this.worldManager.collectCoin) {
                         this.worldManager.collectCoin(otherBody);
+                        this.vibrate(30);
                     }
                 }
 
                 // 3. Powerup Collection
                 if (otherLabel === 'powerup') {
-                    if (this.worldManager.collectPowerup) this.worldManager.collectPowerup(otherBody);
-                    else {
+                    if (this.worldManager.collectPowerup) {
+                        this.worldManager.collectPowerup(otherBody);
+                        this.vibrate(80);
+                    } else {
                         // Inline fallback
                         const type = otherBody.powerupType;
                         if (type === 'shield') this.hasShield = true;
@@ -408,6 +604,7 @@ class Game {
                         this.powerups = this.powerups.filter(p => p !== otherBody);
                         this.pool.powerup.push(otherBody);
                         if (this.audioManager?.playPowerup) this.audioManager.playPowerup();
+                        this.vibrate(80);
                     }
                 }
             }
@@ -445,7 +642,7 @@ class Game {
         
         // Adjusted horizontal force: 7.5 provides a tight, responsive platformer speed.
         const horizForce = 7.5 * this.sensitivity; 
-        // Stricter onGround check to prevent "infinite jumping" or floaty peaks
+        // Stricter onGround check to prevent \"infinite jumping\" or floaty peaks
         const onGround = Math.abs(this.player.velocity.y) < 1.5;
 
         // --- HORIZONTAL MOVEMENT ---
@@ -548,7 +745,7 @@ class Game {
         }
 
         this.lastGameOverY = this.player.position.y;
-        console.log(`DEATH TRIGGERED! Reason: ${reason} | PlayerY: ${Math.round(this.player.position.y)} | LavaY: ${Math.round(this.lavaHeight)}`);
+        console.log("DEATH TRIGGERED! Reason: " + reason + " | PlayerY: " + Math.round(this.player.position.y) + " | LavaY: " + Math.round(this.lavaHeight));
         this.isGameOver = true;
         this.gameState = 'GAME_OVER';
         
@@ -558,6 +755,7 @@ class Game {
         document.getElementById('death-screen').classList.remove('hidden');
         document.getElementById('ui-overlay').classList.add('hidden');
         document.getElementById('mobile-controls').classList.add('hidden');
+        this.vibrate([100, 50, 100]); // Intense pattern for death
         if (this.audioManager) {
             if (this.audioManager.playDeath) this.audioManager.playDeath();
             else if (this.audioManager.playGameOver) this.audioManager.playGameOver();
@@ -662,7 +860,7 @@ class Game {
             if (isCoolingDown) {
                 const darkAngle = (1 - rechargeProgress) * 360;
                 overlay.style.opacity = '1';
-                overlay.style.background = `conic-gradient(from -90deg, rgba(0, 0, 0, 0.72) 0deg ${darkAngle}deg, rgba(0, 0, 0, 0.06) ${darkAngle}deg 360deg)`;
+                overlay.style.background = "conic-gradient(from -90deg, rgba(0, 0, 0, 0.72) 0deg " + darkAngle + "deg, rgba(0, 0, 0, 0.06) " + darkAngle + "deg 360deg)";
             } else {
                 overlay.style.opacity = '0';
                 overlay.style.background = '';
@@ -670,13 +868,24 @@ class Game {
         }
     }
 
-    setActiveSkin(skinId) {
-        const skin = SKINS.find((s) => s.id === skinId) || SKINS[0];
-        if (!this.canUseSkin(skin.id)) return false;
-        this.activeSkinId = skin.id;
-        localStorage.setItem('activeSkin', skin.id);
-        if (this.hud) this.hud.renderSkins();
-        return true;
+    setGameMode(mode) {
+        if (mode === 'fall' && this.bestHeight < 500) {
+            console.log("Fall mode is locked! Reach 500 height.");
+            return;
+        }
+
+        const modeKey = mode.charAt(0).toUpperCase() + mode.slice(1) + 'Mode';
+        if (this._modeClasses[modeKey]) {
+            this.modeStrategy = new this._modeClasses[modeKey](this);
+            
+            const climbBtn = document.getElementById('mode-climb');
+            const fallBtn = document.getElementById('mode-fall');
+            if (climbBtn) climbBtn.classList.toggle('active', mode === 'climb');
+            if (fallBtn) fallBtn.classList.toggle('active', mode === 'fall');
+            
+            console.log("Switched mode to:", mode);
+            if (this.audioManager) this.audioManager.playUI();
+        }
     }
 
     _loadOwnedSkins() {
@@ -700,6 +909,7 @@ class Game {
         return skin.isUnlocked(this);
     }
 
+
     purchaseSkin(skinId) {
         const skin = SKINS.find((s) => s.id === skinId);
         if (!skin || skin.unlockMode !== 'coins' || this.isSkinOwned(skin.id)) return false;
@@ -721,6 +931,57 @@ class Game {
             window.removeEventListener('pointerdown', unlock);
         };
         window.addEventListener('pointerdown', unlock);
+    }
+
+    setActiveSkin(skinId) {
+        const skin = SKINS.find((s) => s.id === skinId) || SKINS[0];
+        if (!this.canUseSkin(skin.id)) return false;
+        this.activeSkinId = skin.id;
+        localStorage.setItem('activeSkin', skin.id);
+        if (this.hud) this.hud.renderSkins();
+        this.syncHomeProfile(); // Update header avatar immediately
+        return true;
+    }
+
+    syncHomeProfile() {
+        // Update name
+        const nameEl = document.getElementById('home-player-name');
+        if (nameEl) nameEl.innerText = this.playerName;
+
+        // Update coin count in header
+        const coinEl = document.getElementById('home-coin-count');
+        if (coinEl) coinEl.innerText = this.coins;
+
+        // Update skin avatar
+        const avatarContainer = document.getElementById('home-skin-avatar');
+        if (avatarContainer) {
+            const skin = SKINS.find(s => s.id === this.activeSkinId) || SKINS[0];
+            const shape = skin.shape || 'round';
+            const color = skin.bodyColor || skin.color;
+            const eyeColor = skin.eyeColor || '#ffffff';
+            
+            avatarContainer.innerHTML = `
+                <div class="skin-preview skin-preview-${shape}" style="background: ${color}; --preview-eye-color: ${eyeColor}; width: 34px; height: 34px; margin: 0; box-shadow: none; border: none;">
+                    ${shape !== 'eye' ? `
+                    <span class="skin-preview-eye skin-preview-eye-left" style="width: 5px; height: 5px;"></span>
+                    <span class="skin-preview-eye skin-preview-eye-right" style="width: 5px; height: 5px;"></span>
+                    ` : ''}
+                </div>
+            `;
+        }
+    }
+
+    syncStats() {
+        const stats = {
+            'stats-high-score': this.bestHeight,
+            'stats-games-played': this.gamesPlayed,
+            'stats-total-coins': this.totalCoinsAcc
+        };
+
+        Object.entries(stats).forEach(([id, val]) => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = val;
+        });
     }
 }
 

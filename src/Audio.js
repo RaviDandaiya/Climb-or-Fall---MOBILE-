@@ -1,5 +1,7 @@
 export class AudioManager {
     constructor() {
+        this.soundOn = true;
+        this.musicOn = true;
         try {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             if (AudioContext) {
@@ -18,7 +20,7 @@ export class AudioManager {
     }
 
     _playTone(freq, type = 'sine', when = 0, duration = 0.08) {
-        if (!this.audio) return;
+        if (!this.audio || !this.soundOn) return;
         try {
             const now = this.audio.currentTime + when;
             const o = this.audio.createOscillator(); 
@@ -48,5 +50,25 @@ export class AudioManager {
     playLavaWarning() { this._playTone(320, 'sawtooth', 0, 0.25); this._playTone(180, 'sine', 0.12, 0.25); }
     playUI() { this._playTone(640, 'triangle', 0, 0.06); }
     playStart() { this._playTone(760, 'sine', 0, 0.12); this._playTone(1040, 'triangle', 0.05, 0.1); }
-    playRevive() { this._playTone(520, 'sine', 0, 0.12); this._playTone(820, 'triangle', 0.06, 0.12); }
+    playMusic() {
+        if (!this.audio || !this.musicOn || this.musicLoop) return;
+        
+        let beat = 0;
+        this.musicInterval = setInterval(() => {
+            if (!this.musicOn) {
+                this.stopMusic();
+                return;
+            }
+            // Simple rhythmic bass beat
+            this._playTone(beat % 4 === 0 ? 60 : 75, 'sine', 0, 0.2);
+            if (beat % 4 === 2) this._playTone(160, 'triangle', 0.05, 0.08);
+            beat++;
+        }, 500);
+        this.musicLoop = true;
+    }
+
+    stopMusic() {
+        if (this.musicInterval) clearInterval(this.musicInterval);
+        this.musicLoop = false;
+    }
 }

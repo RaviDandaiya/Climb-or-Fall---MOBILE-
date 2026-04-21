@@ -112,82 +112,139 @@
             </div>
         </div>
 
-        <!-- Single Unified Rewards Hub -->
-        <div id="rewards-hub" class="floating-nav" style="right: 20px; top: 120px; transform: none;">
-            <button class="nav-icon" id="btn-rewards-hub">🎁</button>
-        </div>
 
-        <!-- Login Screen REMOVED -->
 
-        <!-- Start Menu -->
+        <!-- Start Menu (Redesigned) -->
         <div id="difficulty-screen" class="screen-overlay">
-            <div class="compact-logo-row" style="margin-bottom: 15px;">
-                <img src="./assets/logo.jpg" class="game-logo-img floating" alt="Climb-or-Fall Logo">
-                <h1 class="logo-text">CLIMB<br><span>OR FALL</span></h1>
-            </div>
-
-            <!-- New High Score Banner -->
-            <div id="home-highscore-display" style="background: rgba(0,0,0,0.4); padding: 8px 20px; border-radius: 20px; border: 1px solid rgba(255,215,0,0.3); margin: 0 auto 20px auto; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); width: fit-content;">
-                <span style="font-size: 1.2rem;">🏆</span>
-                <span style="color: #ffd700; font-family: var(--font-main); font-weight: 800; font-size: 0.85rem; letter-spacing: 1.5px;">BEST SCORE: <span id="home-best-score">0</span></span>
-            </div>
-
-            <div class="screen-content" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
-            <div class="settings-panel" style="margin: 0 auto;">
-                <div class="setting-item">
-                    <span class="setting-label">MODE</span>
-                    <div class="segmented-control">
-                        <button id="mode-climb" class="seg-btn active">CLIMB</button>
-                        <button id="mode-fall" class="seg-btn disabled" disabled>FALL 🔒</button>
+            <div class="home-main-content">
+                <div class="hero-section">
+                    <div class="compact-logo-row">
+                        <img src="./assets/logo.jpg" class="game-logo-img floating" alt="Climb-or-Fall Logo">
+                        <h1 class="logo-text">CLIMB<br><span>OR FALL</span></h1>
+                    </div>
+                    
+                    <div id="home-highscore-display" class="best-score-banner">
+                        <span class="trophy-icon">🏆</span>
+                        <div class="best-content">
+                            <span class="best-label">BEST SCORE</span>
+                            <span id="home-best-score" class="best-value">0</span>
+                        </div>
                     </div>
                 </div>
-                <div class="setting-item">
-                    <span class="setting-label">CONTROLS</span>
-                    <div class="segmented-control">
-                        <button id="btn-touch-mode" class="seg-btn active">TOUCH</button>
-                        <button id="btn-tilt-mode" class="seg-btn">TILT</button>
-                    </div>
+
+                <div class="difficulty-section">
+                     <h2 class="section-title">DIFFICULTY</h2>
+                     <div class="segmented-control difficulty-selector">
+                         <button class="seg-btn hub-opt easy" data-difficulty="easy">EASY</button>
+                         <button class="seg-btn hub-opt medium active" data-difficulty="medium">NORMAL</button>
+                         <button class="seg-btn hub-opt hard" data-difficulty="hard">HARD</button>
+                     </div>
                 </div>
-                <div class="setting-item last-item">
-                    <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 5px;">
-                        <span class="setting-label">SENSITIVITY</span>
-                        <span id="sensitivity-value" style="font-size: 0.75rem; font-weight: 800; color: #00ffa3;">100%</span>
-                    </div>
-                    <div class="slider-group" style="width: 100%;">
-                        <input type="range" id="sensitivity-slider" min="0.6" max="1.6" step="0.05" value="1" style="width: 100%;">
-                    </div>
+
+                <div class="action-section">
+                    <button id="btn-start-run" class="start-btn-modern">
+                        <div class="btn-ripple"></div>
+                        <span class="btn-text">START RUN</span>
+                        <div class="btn-glow"></div>
+                    </button>
                 </div>
             </div>
 
-             <h1 class="horror-title" style="font-size: 1.1rem; margin: 10px auto 8px auto; color: rgba(255,255,255,0.6); letter-spacing: 2px; text-align: center;">DIFFICULTY</h1>
-             <div class="difficulty-hub-container">
-                 <button id="difficulty-hub" class="hub-main-btn">NORMAL</button>
-                 <div id="difficulty-options" class="hub-options-grid hidden">
-                     <button class="hub-opt easy" data-difficulty="easy">EASY</button>
-                     <button class="hub-opt medium" data-difficulty="medium">NORMAL</button>
-                     <button class="hub-opt hard" data-difficulty="hard">HARD</button>
-                 </div>
-             </div>
-
-            <!-- New Primary Start Button -->
-            <button id="btn-start-run" class="modern-btn" style="width: 100%; max-width: 250px; height: 60px; min-height: 60px; margin: 0 auto 20px auto; display: flex; justify-content: center;">
-                <span class="btn-text" style="font-size: 1.1rem; letter-spacing: 2px; font-weight: 900;">START RUN</span>
-                <div class="btn-glow"></div>
-            </button>
-            <div class="footer-container" style="margin-top: auto; padding-bottom: 25px; display: flex; flex-direction: column; align-items: center; width: 100%;">
-                <div class="legal-links">
-                    <a href="privacy-policy.html" target="_blank">Privacy Policy</a>
-                    <span>|</span>
-                    <a href="terms-conditions.html" target="_blank">Terms & Conditions</a>
+            <div class="home-footer">
+                <div class="footer-legal">
+                    <a href="privacy-policy.html">Privacy</a>
+                    <span class="dot">•</span>
+                    <a href="terms-conditions.html">Terms</a>
+                    <span class="dot">•</span>
+                    <a href="mailto:skyyforge07@gmail.com">Contact</a>
                 </div>
                 <div class="brand-strip">
                     <img src="./assets/company-logo.png" alt="Company Logo" class="brand-logo">
                     <span class="brand-text">Developed by Skyforge</span>
                 </div>
             </div>
-            </div>
-
         </div>
+
+        <!-- Stats Screen Overlay -->
+        <div id="stats-screen" class="screen-overlay hidden">
+            <button class="close-btn" id="btn-close-stats">×</button>
+            <div class="screen-scroll-container">
+                <div class="overlay-card stats-card">
+                    <div class="card-header">
+                        <span class="header-icon">📊</span>
+                        <h2>YOUR STATS</h2>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-row high-score">
+                            <span class="stat-icon">🏆</span>
+                            <span class="stat-label">High Score</span>
+                            <span class="stat-value" id="stats-high-score">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-icon">📈</span>
+                            <span class="stat-label">Total Distance</span>
+                            <span class="stat-value" id="stats-total-dist">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-icon">💀</span>
+                            <span class="stat-label">Total Deaths</span>
+                            <span class="stat-value" id="stats-total-deaths">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-icon">🪙</span>
+                            <span class="stat-label">Coins Collected</span>
+                            <span class="stat-value" id="stats-total-coins">0</span>
+                        </div>
+                    </div>
+                    <button class="prime-btn" id="btn-share-stats">SHARE STATS</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Leaderboard Screen Overlay -->
+        <div id="leaderboard-screen" class="screen-overlay hidden">
+            <button class="close-btn" id="btn-close-leaderboard">×</button>
+            <div class="overlay-card leaderboard-card">
+                 <div class="card-header orange-gradient">
+                    <span class="header-icon">👑</span>
+                    <h2>LEADERBOARD</h2>
+                 </div>
+                 <div class="podium-section">
+                     <!-- 2nd -->
+                     <div class="podium-rank rank-2">
+                         <div class="podium-avatar">👤</div>
+                         <div class="podium-name">Maverick</div>
+                         <div class="podium-score">35</div>
+                         <div class="podium-step">#2</div>
+                     </div>
+                     <!-- 1st -->
+                     <div class="podium-rank rank-1">
+                         <div class="crown">👑</div>
+                         <div class="podium-avatar">🍒</div>
+                         <div class="podium-name">Queen_11</div>
+                         <div class="podium-score">62</div>
+                         <div class="podium-step">#1</div>
+                     </div>
+                     <!-- 3rd -->
+                     <div class="podium-rank rank-3">
+                         <div class="podium-avatar">👤</div>
+                         <div class="podium-name">Ahmad</div>
+                         <div class="podium-score">14</div>
+                         <div class="podium-step">#3</div>
+                     </div>
+                 </div>
+                 <div class="leaderboard-list">
+                     <div class="list-item">
+                         <span class="item-rank">#4</span>
+                         <span class="item-avatar">👤</span>
+                         <span class="item-name">Beat Me 😎</span>
+                         <span class="item-score">11</span>
+                     </div>
+                     <!-- More items... -->
+                 </div>
+            </div>
+        </div>
+
 
         <!-- Unified Reward Menu (Shop & Battle Pass) -->
         <div id="reward-menu" class="screen-overlay hidden">
@@ -215,6 +272,96 @@
                 </div>
             </div>
         </div>
+
+        <!-- Fully Functional Settings Screen -->
+        <div id="settings-screen" class="screen-overlay hidden">
+            <button class="close-btn" id="btn-close-settings">×</button>
+            <div class="screen-scroll-container">
+                <h1 class="settings-title">SETTINGS</h1>
+                
+                <div class="settings-panel">
+                    <!-- Control Settings -->
+                    <div class="setting-item">
+                        <span class="setting-label">GAME MODE</span>
+                        <div class="segmented-control mode-selector">
+                            <button class="seg-btn active" id="mode-climb">CLIMB</button>
+                            <button class="seg-btn disabled" id="mode-fall">FALL 🔒</button>
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <span class="setting-label">CONTROLS</span>
+                        <div class="segmented-control control-selector">
+                            <button class="seg-btn active" id="control-touch">TOUCH</button>
+                            <button class="seg-btn" id="control-tilt">TILT</button>
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 10px;">
+                            <span class="setting-label">SENSITIVITY</span>
+                            <span id="sensitivity-value" style="font-size: 0.9rem; font-weight: 800; color: #00ffa3;">100%</span>
+                        </div>
+                        <div class="slider-group" style="width: 100%;">
+                            <input type="range" id="sensitivity-slider" min="0.6" max="1.6" step="0.05" value="1" style="width: 100%; cursor: pointer;">
+                        </div>
+                    </div>
+
+                    <!-- Enhanced Audio & Haptics Section -->
+                    <div class="setting-item">
+                        <div class="setting-label-group">
+                            <span class="setting-icon">🔊</span>
+                            <span class="setting-label">SOUND FX</span>
+                        </div>
+                        <button class="toggle-btn-small active" id="toggle-sound">ON</button>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <div class="setting-label-group">
+                            <span class="setting-icon">🎵</span>
+                            <span class="setting-label">MUSIC</span>
+                        </div>
+                        <button class="toggle-btn-small active" id="toggle-music">ON</button>
+                    </div>
+
+                    <div class="setting-item last-item">
+                        <div class="setting-label-group">
+                            <span class="setting-icon">📳</span>
+                            <span class="setting-label">HAPTICS</span>
+                        </div>
+                        <button class="toggle-btn-small active" id="toggle-vibrate">ON</button>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-label-group">
+                            <span class="setting-icon">📧</span>
+                            <span class="setting-label">CONTACT US</span>
+                        </div>
+                        <a href="mailto:skyyforge07@gmail.com" class="toggle-btn-small active" style="text-decoration: none; display: flex; align-items: center; justify-content: center; min-width: 85px;">EMAIL</a>
+                    </div>
+
+                    <div class="setting-item last-item" style="border-bottom: none; padding-bottom: 0; margin-top: 5px;">
+                        <span class="setting-label">PLAYER NAME</span>
+                        <input type="text" id="player-name-input" placeholder="Enter Name" maxlength="12" style="width: 100%; height: 45px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; padding: 0 15px; font-family: var(--font-main); font-weight: 700; margin-top: 5px;">
+                    </div>
+                </div>
+
+                <div style="margin-top: 30px; width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 15px; align-items: center;">
+                    <div class="brand-strip" style="background: rgba(255,255,255,0.02); padding: 15px 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05);">
+                        <img src="./assets/company-logo.png" alt="Company Logo" class="brand-logo">
+                        <span class="brand-text">Skyforge Engine v1.0.4</span>
+                    </div>
+                    <div class="footer-legal">
+                        <a href="privacy-policy.html" target="_blank">Privacy</a>
+                        <span class="dot">•</span>
+                        <a href="terms-conditions.html" target="_blank">Terms</a>
+                        <span class="dot">•</span>
+                        <a href="mailto:skyyforge07@gmail.com">Contact</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
 
         <!-- Death Screen -->
         <div id="death-screen" class="screen-overlay hidden">
@@ -258,6 +405,30 @@
 
 
 
+        <div id="home-header" class="home-header hidden">
+            <div class="header-left">
+                <div id="profile-capsule" class="profile-capsule clickable">
+                    <div id="home-skin-avatar" class="skin-avatar">
+                        <!-- Skin preview icon injected here -->
+                    </div>
+                    <span id="home-player-name" class="header-name">Survivor</span>
+                </div>
+            </div>
+            
+            <div class="header-center">
+                <div id="home-coins-display" class="header-coins-capsule premium-center clickable">
+                    <span class="coin-icon">🪙</span>
+                    <span id="home-coin-count">0</span>
+                    <div class="glow-effect"></div>
+                </div>
+            </div>
+            
+            <div class="header-right">
+                <button class="header-icon-btn" id="btn-rewards-hub">🎁</button>
+                <button class="header-icon-btn" id="btn-stats-hub">📊</button>
+                <button class="header-icon-btn" id="btn-settings-hub">⚙️</button>
+            </div>
+        </div>
         <canvas id="game-canvas"></canvas>
     </div>
     <!-- Removed CDN link effectively -->
