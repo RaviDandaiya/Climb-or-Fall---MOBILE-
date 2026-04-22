@@ -64,10 +64,39 @@ export class WorldManager {
         }
     }
 
+    _checkOverlap(x, y, width, height) {
+        const padding = 20;
+        const minX = x - width / 2 - padding;
+        const maxX = x + width / 2 + padding;
+        const minY = y - height / 2 - padding;
+        const maxY = y + height / 2 + padding;
+
+        return this.game.platforms.some(p => {
+            return !(maxX < p.bounds.min.x || 
+                     minX > p.bounds.max.x || 
+                     maxY < p.bounds.min.y || 
+                     minY > p.bounds.max.y);
+        });
+    }
+
     _addPillar(y, settings) {
         const game = this.game;
-        const height = 100 + Math.random() * 150;
-        const x = Math.random() * (CONFIG.canvasWidth - 80) + 40;
+        let height = 100 + Math.random() * 150;
+        let x = Math.random() * (CONFIG.canvasWidth - 80) + 40;
+
+        let attempts = 0;
+        let hasOverlap = false;
+
+        do {
+            hasOverlap = this._checkOverlap(x, y, 40, height);
+            if (hasOverlap) {
+                x = Math.random() * (CONFIG.canvasWidth - 80) + 40;
+                attempts++;
+            }
+        } while (hasOverlap && attempts < 10);
+
+        if (hasOverlap) return; // Give up trying to spawn to prevent overlap
+
         let pillar = game.pool.pillar.pop();
         if (pillar) {
             const oldHeight = pillar.bounds.max.y - pillar.bounds.min.y;
@@ -92,9 +121,24 @@ export class WorldManager {
 
     _addRegularPlatform(y, index, settings) {
         const game = this.game;
-        const pParams = game.modeStrategy.getPlatformParams(index, settings);
-        const width = pParams.width;
-        const x = pParams.x;
+        let pParams = game.modeStrategy.getPlatformParams(index, settings);
+        let width = pParams.width;
+        let x = pParams.x;
+
+        let attempts = 0;
+        let hasOverlap = false;
+
+        do {
+            hasOverlap = this._checkOverlap(x, y, width, CONFIG.platformHeight);
+            if (hasOverlap) {
+                pParams = game.modeStrategy.getPlatformParams(index, settings);
+                width = pParams.width;
+                x = pParams.x;
+                attempts++;
+            }
+        } while (hasOverlap && attempts < 10);
+
+        if (hasOverlap) return; // Give up trying to spawn to prevent overlap
 
         const isHazard = index > 15 && Math.random() < settings.hazardChance;
         const isCrumbling = !isHazard && index > 10 && Math.random() < 0.15;
