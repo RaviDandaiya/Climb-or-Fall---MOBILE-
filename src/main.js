@@ -160,37 +160,37 @@ class Game {
                 let lastTime = 0;
                 const handler = (e) => {
                     const now = Date.now();
-                    if (now - lastTime < 400) return; // Prevent double-triggers/ghost clicks
+                    if (now - lastTime < 400) return; 
                     lastTime = now;
                     
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log(`UI Exec: ${id}`);
+                    if (e && e.cancelable) e.preventDefault();
+                    if (e) e.stopPropagation();
+                    
+                    console.log(`Immediate Click: ${id}`);
                     callback(e);
                 };
+                // Multi-event support for maximum device compatibility
                 el.onpointerdown = handler;
+                el.ontouchstart = handler;
                 el.onclick = handler;
             }
         };
         
-        document.getElementById('retry-button').onclick = () => {
-            uiClick();
+        registerImmediateClick('retry-button', () => {
             document.getElementById('death-screen').classList.add('hidden');
             this.startGame(this.difficulty);
-        };
+        });
+        
+        registerImmediateClick('home-button', () => {
+            this.showMainMenu();
+        });
 
-        const reviveBtn = document.getElementById('ad-revive-btn');
-        if (reviveBtn) {
-            reviveBtn.onclick = () => {
-                uiClick();
-                if (this.adManager) {
-                    this.adManager.startRevive();
-                }
-            };
-        }
+        registerImmediateClick('ad-revive-btn', () => {
+            if (this.adManager) {
+                this.adManager.startRevive();
+            }
+        });
 
-        const homeBtn = document.getElementById('home-button');
-        if (homeBtn) homeBtn.onclick = () => { uiClick(); this.showMainMenu(); };
 
         const diffHub = document.getElementById('difficulty-hub');
         const diffOptions = document.getElementById('difficulty-options');
@@ -198,10 +198,9 @@ class Game {
         const diffNames = { easy: 'EASY', medium: 'NORMAL', hard: 'HARD' };
         if (diffHub) {
             diffHub.innerText = diffNames[this.difficulty] || 'NORMAL';
-            diffHub.onclick = () => {
-                uiClick();
+            registerImmediateClick('difficulty-hub', () => {
                 if (diffOptions) diffOptions.classList.toggle('hidden');
-            };
+            });
         }
 
         document.querySelectorAll('.hub-opt').forEach(btn => {
@@ -242,8 +241,8 @@ class Game {
             }
         };
 
-        if (document.getElementById('tab-shop')) document.getElementById('tab-shop').onclick = () => switchTab('shop');
-        if (document.getElementById('tab-pass')) document.getElementById('tab-pass').onclick = () => switchTab('pass');
+        registerImmediateClick('tab-shop', () => switchTab('shop'));
+        registerImmediateClick('tab-pass', () => switchTab('pass'));
 
         const openRewards = (tab) => {
             uiClick();
@@ -256,39 +255,24 @@ class Game {
 
         if (document.getElementById('btn-rewards-hub')) {
             registerImmediateClick('btn-rewards-hub', () => {
-                console.log("Opening Rewards Hub...");
-                const rMenu = document.getElementById('reward-menu');
-                if (rMenu) rMenu.classList.remove('hidden');
-                uiClick();
-                document.getElementById('home-header').classList.add('hidden');
-                document.getElementById('difficulty-screen').classList.add('hidden');
+                this.showOverlay('reward-menu');
                 switchTab('shop');
             });
         }
         
 
-        const settingsMenu = document.getElementById('settings-screen');
-        const openSettings = () => {
-            uiClick();
-            if (settingsMenu) settingsMenu.classList.remove('hidden');
-            document.getElementById('home-header').classList.add('hidden');
-            document.querySelectorAll('.floating-fab').forEach(el => el.classList.add('hidden'));
-            document.getElementById('difficulty-screen').classList.add('hidden');
-        };
 
-        if (document.getElementById('btn-settings-hub')) {
-            document.getElementById('btn-settings-hub').onclick = openSettings;
-        }
 
         document.querySelectorAll('.close-btn').forEach(btn => {
-            const handler = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                uiClick(); 
-                this.showMainMenu(); 
-            };
-            btn.onpointerdown = handler;
-            btn.onclick = handler;
+            if (!btn.id) btn.id = 'btn-close-' + Math.random().toString(36).substr(2, 9);
+            registerImmediateClick(btn.id, (e) => {
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                uiClick();
+                this.showMainMenu();
+            });
         });
 
         // Mode Toggles (Climb vs Fall)
@@ -333,42 +317,22 @@ class Game {
         const statsMenu = document.getElementById('stats-screen');
 
         registerImmediateClick('btn-stats-hub', () => {
-            console.log("Opening Stats Hub...");
-            const sMenu = document.getElementById('stats-screen');
-            if (sMenu) sMenu.classList.remove('hidden');
-            uiClick();
+            this.showOverlay('stats-screen');
             this.syncStats();
-            document.getElementById('home-header').classList.add('hidden');
-            document.getElementById('difficulty-screen').classList.add('hidden');
         });
-
 
         registerImmediateClick('btn-settings-hub', () => {
-            console.log("Opening Settings Hub...");
-            const setMenu = document.getElementById('settings-screen');
-            if (setMenu) setMenu.classList.remove('hidden');
-            uiClick();
-            document.getElementById('home-header').classList.add('hidden');
-            document.getElementById('difficulty-screen').classList.add('hidden');
+            this.showOverlay('settings-screen');
         });
 
 
 
-        const exitBtn = document.getElementById('btn-exit-game');
-        if (exitBtn) {
-            exitBtn.onclick = (e) => {
-                if(e) e.stopPropagation();
-                uiClick();
-                this.isGameOver = true;
-                this.gameState = 'MENU';
-                this.showMainMenu();
-            };
-        }
-
-        document.querySelectorAll('.close-btn').forEach(btn => {
-            if (btn.id === 'btn-close-rewards' || btn.id === 'btn-close-settings' || btn.id === 'btn-close-stats' || btn.id === 'btn-close-leaderboard') return;
-            btn.onclick = () => { uiClick(); if(btn.parentElement) { btn.parentElement.classList.add('hidden'); this.showMainMenu(); } };
+        registerImmediateClick('btn-exit-game', (e) => {
+            this.isGameOver = true;
+            this.gameState = 'MENU';
+            this.showMainMenu();
         });
+
 
         const nameInput = document.getElementById('player-name-input');
         if (nameInput) {
@@ -459,6 +423,26 @@ class Game {
     showMenuOverlay() {
         const overlay = document.getElementById('difficulty-screen');
         if (overlay) overlay.classList.remove('hidden');
+    }
+
+    showOverlay(id) {
+        if (this.audioManager) {
+            this.audioManager.resume();
+            this.audioManager.playUI();
+        }
+        
+        // Hide core home UI
+        const homeHeader = document.getElementById('home-header');
+        const diffScreen = document.getElementById('difficulty-screen');
+        if (homeHeader) homeHeader.classList.add('hidden');
+        if (diffScreen) diffScreen.classList.add('hidden');
+        document.querySelectorAll('.floating-fab').forEach(el => el.classList.add('hidden'));
+
+        // Show target overlay
+        const target = document.getElementById(id);
+        if (target) target.classList.remove('hidden');
+        
+        console.log(`Showing Overlay: ${id}`);
     }
 
     showMainMenu() {

@@ -342,13 +342,29 @@ body.menu-open #btn-exit-game {
 
 .close-btn {
   position: absolute;
-  top: 30px;
-  right: 30px;
-  background: none;
-  border: none;
+  top: calc(30px + env(safe-area-inset-top, 0px));
+  right: 25px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: #fff;
-  font-size: 3rem;
+  font-size: 2.5rem;
   cursor: pointer;
+  z-index: 10005; /* Even higher */
+  width: 65px;
+  height: 65px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  touch-action: none;
+  transition: all 0.3s;
+}
+
+.close-btn:active {
+  transform: scale(0.9);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* --- Shop & Grid --- */
@@ -1019,13 +1035,14 @@ span.skin-preview-eye {
     radial-gradient(circle at 100% 100%, rgba(0, 209, 255, 0.15) 0%, transparent 50%),
     radial-gradient(circle at center, rgba(15, 10, 30, 0.98) 0%, #07070a 100%);
   overflow: hidden;
-  padding: 50px 10px 15px 10px;
+  padding: calc(65px + env(safe-area-inset-top, 0px)) 15px 20px 15px;
   position: relative;
   width: 100%;
   height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: space-between; /* Dynamic spacing */
 }
 
 #difficulty-screen .menu-logo-container {
@@ -2378,13 +2395,17 @@ body.menu-open .screen-overlay {
     top: 0;
     left: 0;
     right: 0;
-    height: 90px;
-    padding: calc(10px + env(safe-area-inset-top, 0px)) 20px 0 20px;
+    padding: calc(10px + env(safe-area-inset-top, 0px)) 15px 0 15px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     z-index: 5000;
+    pointer-events: none;
     animation: slideDownFade 0.8s cubic-bezier(0.19, 1, 0.22, 1) both;
+}
+
+.header-left, .header-right {
+    pointer-events: auto;
 }
 
 @keyframes slideDownFade {
@@ -2395,7 +2416,12 @@ body.menu-open .screen-overlay {
 .header-left, .header-right {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: clamp(6px, 2vw, 10px);
+}
+
+.header-right {
+    flex-wrap: nowrap;
+    justify-content: flex-end;
 }
 
 .header-center {
@@ -2564,10 +2590,11 @@ body.menu-open .screen-overlay {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start; /* Changed from center to shift things up */
+    justify-content: space-evenly; /* Dynamic distribution */
     height: 100%;
     width: 100%;
-    padding: 65px 20px 40px 20px; /* Moved up by reducing top padding */
+    padding: calc(80px + env(safe-area-inset-top, 0px)) 20px calc(100px + env(safe-area-inset-bottom, 0px)) 20px;
+    box-sizing: border-box;
 }
 
 .hero-section {
@@ -2632,21 +2659,22 @@ body.menu-open .screen-overlay {
 
 .start-btn-modern {
     position: relative;
-    width: 280px;
-    height: 75px;
+    width: min(300px, 80vw);
+    min-height: 70px;
     background: linear-gradient(135deg, #00ffa3, #00d1ff);
     border: none;
     border-radius: 24px;
     color: #000;
     font-family: var(--font-main);
     font-weight: 900;
-    font-size: 1.4rem;
+    font-size: clamp(1.2rem, 5vw, 1.5rem);
     letter-spacing: 3px;
     cursor: pointer;
     overflow: hidden;
     box-shadow: 0 20px 40px rgba(0, 255, 163, 0.4);
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     animation: fadeInUp 1s 0.4s cubic-bezier(0.19, 1, 0.22, 1) both;
+    margin: 10px 0;
 }
 
 .start-btn-modern:hover {
@@ -2747,14 +2775,21 @@ body.menu-open .screen-overlay {
 }
 
 .stat-row {
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 20px;
-    padding: 18px 22px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 24px;
+    padding: 20px 24px;
     display: flex;
     align-items: center;
-    gap: 15px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    transition: all 0.3s;
+    gap: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.stat-row.high-score {
+    background: linear-gradient(135deg, rgba(255, 204, 0, 0.15), rgba(255, 140, 0, 0.05));
+    border: 1px solid rgba(255, 204, 0, 0.3);
+    box-shadow: 0 8px 25px rgba(255, 204, 0, 0.1);
 }
 
 .stat-row:hover {
@@ -2771,10 +2806,14 @@ body.menu-open .screen-overlay {
 .stat-label {
     flex: 1;
     font-weight: 800;
-    font-size: 0.9rem;
-    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.8);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
+}
+
+.high-score .stat-label {
+    color: #ffcc00;
 }
 
 .stat-value {
