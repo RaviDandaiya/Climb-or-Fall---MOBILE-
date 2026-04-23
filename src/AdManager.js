@@ -10,11 +10,18 @@ export class AdManager {
     }
 
     async init() {
-        if (!Capacitor.isNativePlatform()) return;
+        if (!Capacitor.isNativePlatform() || this.isInitialized) return;
         try {
-            await UnityAds.initialize({ gameId: '6051910', testMode: false });
+            console.log("Initializing Unity Ads for PRODUCTION...");
+            await UnityAds.initialize({ 
+                gameId: '6051910', 
+                testMode: false // ENSURED: Production Mode
+            });
+            this.isInitialized = true;
             this.load();
-        } catch (_) {}
+        } catch (err) {
+            console.error("Ad Initialization Failed:", err);
+        }
     }
 
     async load() {
@@ -45,9 +52,11 @@ export class AdManager {
             const adOverlay = document.createElement('div');
             adOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#111;color:#fff;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Outfit,sans-serif;';
             adOverlay.innerHTML = `
-                <h1 style="color:#ffcc00; margin-bottom:10px; font-size:32px;">TEST ADVERTISEMENT</h1>
-                <p style="font-size:18px; color:#aaa;">Simulating rewarded video ad...</p>
-                <h2 id="fake-ad-timer" style="margin-top:40px;font-size:48px;">3</h2>
+                <div style="background:#1a1a2e; padding:30px; border-radius:20px; border:2px solid #ffcc00; text-align:center; box-shadow:0 0 50px rgba(0,0,0,0.8);">
+                    <h1 style="color:#ffcc00; margin-bottom:10px; font-size:32px; letter-spacing:2px;">WATCHING AD...</h1>
+                    <p style="font-size:18px; color:#aaa; margin-bottom:20px;">Granting reward in...</p>
+                    <h2 id="fake-ad-timer" style="font-size:64px; color:#fff; text-shadow:0 0 20px #ffcc00;">3</h2>
+                </div>
             `;
             document.body.appendChild(adOverlay);
             
@@ -66,23 +75,56 @@ export class AdManager {
         }
 
         const btn = document.getElementById('ad-revive-btn');
-        if (btn) { btn.innerText = 'LOADING...'; btn.disabled = true; }
+        const originalText = btn ? btn.innerText : 'REVIVE';
+        
+        if (btn) { 
+            btn.innerText = 'LOADING AD...'; 
+            btn.disabled = true; 
+            btn.style.opacity = '0.7';
+        }
+
         try {
-            await UnityAds.showRewardedVideo({ placementId: 'Rewarded_Android' });
-            if (game.handleAdReward) game.handleAdReward();
-        } catch (_) {
-            if (game.handleAdReward) game.handleAdReward(); // fallback
-            this.load();
+            // Check if loaded, if not, try to load one last time
+            let isLoaded = (await UnityAds.isRewardedVideoLoaded({ placementId: 'Rewarded_Android' })).loaded;
+            
+            if (!isLoaded) {
+                await UnityAds.loadRewardedVideo({ placementId: 'Rewarded_Android' });
+                // Short wait to see if it loads
+                await new Promise(r => setTimeout(r, 1500));
+                isLoaded = (await UnityAds.isRewardedVideoLoaded({ placementId: 'Rewarded_Android' })).loaded;
+            }
+
+            if (isLoaded) {
+                const result = await UnityAds.showRewardedVideo({ placementId: 'Rewarded_Android' });
+                // SUCCESS: Grant reward only if completed/success
+                if (result && (result.completed || result.success)) {
+                    if (game.handleAdReward) game.handleAdReward();
+                } else {
+                    if (btn) btn.innerText = 'SKIPPED';
+                    setTimeout(() => { if(btn) btn.innerText = originalText; }, 2000);
+                }
+            } else {
+                if (btn) btn.innerText = 'NO AD READY';
+                setTimeout(() => { if(btn) btn.innerText = originalText; }, 2000);
+            }
+        } catch (error) {
+            console.error('Ad Show Error:', error);
+            if (btn) btn.innerText = 'ERROR';
+            setTimeout(() => { if(btn) btn.innerText = originalText; }, 2000);
         } finally {
-            if (btn) { btn.innerText = 'REVIVE'; btn.disabled = false; }
+            if (btn) {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+            }
+            this.load(); // Reload for next opportunity
         }
     }
 
     async startPowerAd(targetVx) {
         const game = this.game;
-        if (game.isAdPlaying) return; // Prevent spam
+        if (game.isAdPlaying) return; 
 
-        game.isAdPlaying = true; // Pause game logic
+        game.isAdPlaying = true; // Pause game
 
         const grantPower = () => {
             game.isAdPlaying = false;
@@ -94,9 +136,11 @@ export class AdManager {
             const adOverlay = document.createElement('div');
             adOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#111;color:#fff;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Outfit,sans-serif;';
             adOverlay.innerHTML = `
-                <h1 style="color:#ffcc00; margin-bottom:10px; font-size:32px;">TEST POWER AD</h1>
-                <p style="font-size:18px; color:#aaa;">Simulating rewarded video to unlock power...</p>
-                <h2 id="fake-power-ad-timer" style="margin-top:40px;font-size:48px;">3</h2>
+                <div style="background:#1a1a2e; padding:30px; border-radius:20px; border:2px solid #00d1ff; text-align:center;">
+                    <h1 style="color:#00d1ff; margin-bottom:10px; font-size:32px;">POWER AD</h1>
+                    <p style="font-size:18px; color:#aaa;">Unlocking Super Dash...</p>
+                    <h2 id="fake-power-ad-timer" style="margin-top:20px;font-size:48px;">3</h2>
+                </div>
             `;
             document.body.appendChild(adOverlay);
             
@@ -115,10 +159,23 @@ export class AdManager {
         }
 
         try {
-            await UnityAds.showRewardedVideo({ placementId: 'Rewarded_Android' });
-            grantPower();
-        } catch (_) {
-            game.isAdPlaying = false; // Just unpause, don't grant power
+            const isLoaded = (await UnityAds.isRewardedVideoLoaded({ placementId: 'Rewarded_Android' })).loaded;
+            if (isLoaded) {
+                const result = await UnityAds.showRewardedVideo({ placementId: 'Rewarded_Android' });
+                if (result && (result.completed || result.success)) {
+                    grantPower();
+                } else {
+                    game.isAdPlaying = false; // Unpause without reward
+                }
+            } else {
+                // If no ad, maybe offer a fallback or just unpause
+                game.isAdPlaying = false;
+                alert("Ads are not ready yet. Please try again in a moment!");
+            }
+        } catch (error) {
+            console.error('Power Ad Error:', error);
+            game.isAdPlaying = false;
+        } finally {
             this.load();
         }
     }

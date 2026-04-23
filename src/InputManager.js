@@ -32,7 +32,7 @@ export class InputManager {
             const down = (e) => {
                 e.preventDefault();
                 this.keys[key] = true;
-                try { if (game.audioManager?.audio?.state === 'suspended') game.audioManager.audio.resume(); } catch (_) {}
+                try { if (game.audioManager) game.audioManager.resume(); } catch (_) {}
             };
             const up = () => { this.keys[key] = false; };
             el.addEventListener('pointerdown', down);
@@ -71,7 +71,7 @@ export class InputManager {
             if (e.target.tagName !== 'BUTTON') {
                 e.preventDefault();
                 this.keys['TouchJump'] = true;
-                try { if (game.audioManager?.audio?.state === 'suspended') game.audioManager.audio.resume(); } catch (_) {}
+                try { if (game.audioManager) game.audioManager.resume(); } catch (_) {}
             }
         };
         const handleTapEnd = () => { this.keys['TouchJump'] = false; };

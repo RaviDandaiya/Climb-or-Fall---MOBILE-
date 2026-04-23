@@ -306,6 +306,21 @@ export class Renderer {
                     ctx.fillStyle = '#ffae00';
                     this.roundRect(ctx, p.position.x - w / 2, p.position.y - 6, w, 15, 4);
                     ctx.fill();
+                } else if (p.isSafety) {
+                    // Draw the "Holy Wall" safety platform
+                    const grad = ctx.createLinearGradient(p.bounds.min.x, 0, p.bounds.max.x, 0);
+                    grad.addColorStop(0, 'rgba(0, 255, 136, 0)');
+                    grad.addColorStop(0.5, 'rgba(0, 255, 136, 0.8)');
+                    grad.addColorStop(1, 'rgba(0, 255, 136, 0)');
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(p.bounds.min.x, p.bounds.min.y, w, h);
+                    
+                    // Add a glowing core
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = '#00ff88';
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(p.bounds.min.x, p.position.y - 2, w, 4);
+                    ctx.shadowBlur = 0;
                 } else {
                     const ph = CONFIG.platformHeight;
                     ctx.drawImage(this.platformCanvas, 5, 5, 190, ph, p.position.x - w / 2, p.position.y - ph/2, w, ph);
@@ -690,26 +705,51 @@ export class Renderer {
         this.game.activeCoins.forEach(c => {
             const isBig = c.value > 1;
             ctx.translate(c.position.x, c.position.y);
-            ctx.rotate(time / (isBig ? 200 : 500));
             
+            // 3D Rotation effect using math
+            const rotSpeed = isBig ? 0.02 : 0.03;
+            const tilt = Math.sin(time * rotSpeed); 
+            ctx.scale(Math.abs(tilt), 1); // Horizontal squash for rotation feel
+
             if (isBig) {
                 // Glow for big coin
-                const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 20);
-                grad.addColorStop(0, 'rgba(255, 215, 0, 0.4)');
+                const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 22);
+                grad.addColorStop(0, 'rgba(255, 215, 0, 0.5)');
                 grad.addColorStop(1, 'transparent');
                 ctx.fillStyle = grad;
-                ctx.beginPath(); ctx.arc(0, 0, 20, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(0, 0, 22, 0, Math.PI*2); ctx.fill();
             }
 
-            const cSize = isBig ? 12 : 8;
+            const cSize = isBig ? 13 : 9;
+            const baseColor = isBig ? '#ffcc00' : '#ffaa00';
+            const lightColor = isBig ? '#fff5cc' : '#ffeb99';
+            const darkColor = isBig ? '#b38f00' : '#996600';
+
+            // Outer rim
             ctx.beginPath();
-            ctx.arc(0, 0, cSize * cmult, 0, Math.PI * 2);
-            ctx.fillStyle = isBig ? '#ffde00' : '#ffb300'; 
+            ctx.arc(0, 0, cSize, 0, Math.PI * 2);
+            ctx.fillStyle = darkColor;
             ctx.fill();
+
+            // Main body
             ctx.beginPath();
-            ctx.arc(0, 0, (cSize - 2) * cmult, 0, Math.PI * 2);
-            ctx.fillStyle = isBig ? '#ffffff' : '#ffe066'; 
+            ctx.arc(0, 0, cSize - 1.5, 0, Math.PI * 2);
+            ctx.fillStyle = baseColor;
             ctx.fill();
+
+            // Highlight
+            ctx.beginPath();
+            ctx.arc(-2, -2, cSize / 2.5, 0, Math.PI * 2);
+            ctx.fillStyle = lightColor;
+            ctx.fill();
+
+            // Inner Detail (The "C" or circle)
+            ctx.strokeStyle = darkColor;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(0, 0, cSize / 2, 0, Math.PI * 2);
+            ctx.stroke();
+
             ctx.resetTransform();
             ctx.scale(scale, scale);
             ctx.translate(0, this.game.cameraY);

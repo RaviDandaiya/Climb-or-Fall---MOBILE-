@@ -164,8 +164,17 @@ export class WorldManager {
 
         if (!isHazard && !isCrumbling) {
             const rng = Math.random();
-            if (rng < 0.1) this.addCoin(x, y - 35);
-            else if (rng < 0.15) this.addPowerup(x, y - 40);
+            if (rng < 0.15) {
+                // Spawn a cluster of coins (1-4)
+                const count = Math.floor(Math.random() * 3) + 1;
+                const spacing = 25;
+                const startX = x - ((count - 1) * spacing) / 2;
+                for (let i = 0; i < count; i++) {
+                    this.addCoin(startX + i * spacing, y - 35);
+                }
+            } else if (rng < 0.20) {
+                this.addPowerup(x, y - 40);
+            }
         }
     }
 
@@ -268,6 +277,16 @@ export class WorldManager {
             }
         }
 
+        // Cull enemies
+        for (let i = game.enemies.length - 1; i >= 0; i--) {
+            const e = game.enemies[i];
+            if (game.modeStrategy.shouldCullPlatform(e.position.y, ly, py)) {
+                World.remove(game.world, e);
+                game.enemies.splice(i, 1);
+                game.pool.enemy.push(e);
+            }
+        }
+
         // Generate new
         const settings = DIFFICULTY_SETTINGS[game.difficulty];
         let nextY = game.modeStrategy.getNextPlatformY(game.platforms, py, settings);
@@ -310,24 +329,51 @@ export class WorldManager {
         if (!player) return;
 
         game.enemies.forEach(e => {
+            const distY = Math.abs(e.position.y - player.position.y);
+            
+            // Only update enemies that are somewhat near the player vertically to save CPU
+            // and prevent far-away enemies from doing weird things
+            if (distY > 1200) return;
+
             if (e.isStalker) {
                 // Stalker AI: move towards player if vertically close
-                const distY = Math.abs(e.position.y - player.position.y);
                 const distX = player.position.x - e.position.x;
                 
-                if (distY < 400) {
-                    // Charge!
+                // Only charge if within a reasonable vertical range
+                if (distY < 450 && distY > 30) {
+                    // Charge! 
                     const dir = distX > 0 ? 1 : -1;
-                    e.moveSpeed = dir * (4 + (game.stage * 0.5));
+                    
+                    // Added a horizontal deadzone (20px) to prevent the "tethered" jitter effect
+                    if (Math.abs(distX) > 20) {
+                        // Use a speed that is slightly randomized and NOT exactly 7.5 (player speed)
+                        // to avoid the visual illusion of being tethered.
+                        const baseSpeed = 3 + (game.stage * 0.4);
+                        const randomVariation = (Math.sin(game.frameCount * 0.05) * 1); // Subtle wave
+                        e.moveSpeed = dir * (baseSpeed + randomVariation);
+                    } else {
+                        // Slow down when very close horizontally
+                        e.moveSpeed *= 0.9;
+                    }
                 } else {
-                    // Patrol
+                    // Patrol if player is too far or vertically offset
                     if (e.position.x < 40 || e.position.x > CONFIG.canvasWidth - 40) e.moveSpeed *= -1;
                 }
             } else {
-                // Regular Patrol AI
+                // Regular Patrol AI: keep it independent
                 if (e.position.x < 40 || e.position.x > CONFIG.canvasWidth - 40) e.moveSpeed *= -1;
             }
+            
+            // Apply horizontal movement
             Body.translate(e, { x: e.moveSpeed, y: 0 });
+
+            // Enemy Screen wrap-around (matches player behavior)
+            // This prevents them from getting stuck at edges and following player across screen
+            if (e.position.x < -60) {
+                Body.setPosition(e, { x: CONFIG.canvasWidth + 50, y: e.position.y });
+            } else if (e.position.x > CONFIG.canvasWidth + 60) {
+                Body.setPosition(e, { x: -50, y: e.position.y });
+            }
         });
     }
 

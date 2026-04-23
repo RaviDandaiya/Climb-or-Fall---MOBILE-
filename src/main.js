@@ -58,6 +58,7 @@ class Game {
         this.coins = parseInt(localStorage.getItem('coins')) || 0;
         this.totalCoinsAcc = parseInt(localStorage.getItem('totalCoinsAcc')) || 0;
         this.gamesPlayed = parseInt(localStorage.getItem('gamesPlayed')) || 0;
+        this.totalDistance = parseInt(localStorage.getItem('totalDistance')) || 0;
         this.magnetTimer = 0; // Fixed: initialize magnet timer
         this.dashCooldown = 0;
         this.maxDashCooldown = 0;
@@ -143,11 +144,59 @@ class Game {
             this.hud.updateHUD();
             this.hud.renderSkins();
             this.hud.renderPass();
+            this.setupNativeBridge();
             this.showMainMenu(); // Sets up initial UI state
             console.log("Game Init Sequence Complete");
         } catch (e) {
             console.error('Fatal Init Error:', e);
             this.showMainMenu();
+        }
+    }
+
+    async setupNativeBridge() {
+        // Safe check for Capacitor
+        if (typeof window === 'undefined' || !window.Capacitor) return;
+        
+        console.log("Initializing Native Bridge...");
+        
+        try {
+            // Use global access to avoid import resolution errors in Vite
+            const App = window.Capacitor.Plugins.App;
+            if (!App) {
+                console.warn("Capacitor App plugin not found globally.");
+                return;
+            }
+            
+            App.addListener('backButton', () => {
+                console.log("Hardware Back Button Pressed");
+                
+                // 1. If any overlay is open, close it
+                const overlays = ['stats-screen', 'leaderboard-screen', 'reward-menu', 'settings-screen', 'death-screen'];
+                let anyOpen = false;
+                
+                for (const id of overlays) {
+                    const el = document.getElementById(id);
+                    if (el && !el.classList.contains('hidden')) {
+                        this.showMainMenu();
+                        anyOpen = true;
+                        break;
+                    }
+                }
+                
+                // 2. If already in main menu, exit app
+                if (!anyOpen && !document.getElementById('difficulty-screen').classList.contains('hidden')) {
+                    App.exitApp();
+                }
+                
+                // 3. If in game, pause/show menu
+                if (!anyOpen && !this.isGameOver) {
+                    this.isGameOver = true;
+                    this.gameState = 'MENU';
+                    this.showMainMenu();
+                }
+            });
+        } catch (err) {
+            console.warn("Native Bridge Initialization failed (likely web mode):", err);
         }
     }
 
@@ -177,11 +226,13 @@ class Game {
         };
         
         registerImmediateClick('retry-button', () => {
+            if (this.adManager) this.adManager.showGameOverAd();
             document.getElementById('death-screen').classList.add('hidden');
             this.startGame(this.difficulty);
         });
         
         registerImmediateClick('home-button', () => {
+            if (this.adManager) this.adManager.showGameOverAd();
             this.showMainMenu();
         });
 
@@ -319,6 +370,19 @@ class Game {
         registerImmediateClick('btn-stats-hub', () => {
             this.showOverlay('stats-screen');
             this.syncStats();
+        });
+
+        registerImmediateClick('btn-share-stats', () => {
+            const shareText = `🚀 I've climbed ${this.bestHeight}m in Climb-or-Fall! Can you beat my score? Total distance traveled: ${this.totalDistance}m. Play now!`;
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Climb-or-Fall Stats',
+                    text: shareText,
+                    url: window.location.href
+                }).catch(() => {});
+            } else {
+                alert(shareText);
+            }
         });
 
         registerImmediateClick('btn-settings-hub', () => {
@@ -740,6 +804,11 @@ class Game {
         document.getElementById('ui-overlay').classList.add('hidden');
         document.getElementById('mobile-controls').classList.add('hidden');
         this.vibrate([100, 50, 100]); // Intense pattern for death
+        
+        // Update stats
+        this.totalDistance += this.score;
+        localStorage.setItem('totalDistance', this.totalDistance);
+        
         if (this.audioManager) {
             if (this.audioManager.playDeath) this.audioManager.playDeath();
             else if (this.audioManager.playGameOver) this.audioManager.playGameOver();
@@ -761,21 +830,22 @@ class Game {
             Body.setVelocity(this.player, { x: 0, y: 0 });
             Body.setAngularVelocity(this.player, 0);
 
-            // Calculate safe position based on mode
-            const safeDistance = 350;
+            // Calculate safe position based on mode (away from the hazard that killed them)
+            const safeDistance = 450;
             const moveDir = (this.modeStrategy.name === 'fall') ? 1 : -1;
             const newY = this.player.position.y + (moveDir * safeDistance);
             
             Body.setPosition(this.player, { x: CONFIG.canvasWidth / 2, y: newY });
             
-            // Create a temporary safety platform so they have somewhere to stand
-            const safetyPlatform = Body.create({
-                position: { x: CONFIG.canvasWidth / 2, y: newY + 100 },
-                parts: [Bodies.rectangle(CONFIG.canvasWidth / 2, newY + 100, 300, 20)],
+            // Create a "New Wall" / Safety Floor that spans the entire width
+            // This ensures the user has a safe place to land after the revive
+            const safetyPlatform = Bodies.rectangle(CONFIG.canvasWidth / 2, newY + 120, CONFIG.canvasWidth, 30, {
                 isStatic: true,
                 label: 'platform',
-                render: { visible: false }
+                isSafety: true, // Special flag for the renderer to draw it as a "Holy Wall"
+                friction: 0.5
             });
+            
             World.add(this.world, safetyPlatform);
             this.platforms.push(safetyPlatform);
 
@@ -958,7 +1028,8 @@ class Game {
     syncStats() {
         const stats = {
             'stats-high-score': this.bestHeight,
-            'stats-games-played': this.gamesPlayed,
+            'stats-total-dist': this.totalDistance,
+            'stats-total-deaths': this.gamesPlayed,
             'stats-total-coins': this.totalCoinsAcc
         };
 
