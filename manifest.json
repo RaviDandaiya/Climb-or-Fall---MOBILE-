@@ -9,8 +9,8 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "./assets/logo.jpg",
-      "type": "image/jpeg",
+      "src": "./assets/icon.png",
+      "type": "image/png",
       "sizes": "192x192 512x512"
     }
   ]
