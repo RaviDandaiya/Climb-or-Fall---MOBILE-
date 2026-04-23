@@ -145,7 +145,17 @@ class Game {
             this.hud.renderSkins();
             this.hud.renderPass();
             this.setupNativeBridge();
-            this.showMainMenu(); // Sets up initial UI state
+            
+            // Fade out splash screen after a short delay
+            setTimeout(() => {
+                const splash = document.getElementById('splash-screen');
+                if (splash) {
+                    splash.classList.add('fade-out');
+                    setTimeout(() => splash.remove(), 800);
+                }
+                this.showMainMenu();
+            }, 2200); // Wait for loading bar animation
+            
             console.log("Game Init Sequence Complete");
         } catch (e) {
             console.error('Fatal Init Error:', e);
