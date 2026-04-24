@@ -352,8 +352,8 @@ class Game {
         };
 
         // Control Toggles (Touch vs Tilt)
-        const touchBtn = document.getElementById('btn-touch-mode');
-        const tiltBtn = document.getElementById('btn-tilt-mode');
+        const touchBtn = document.getElementById('control-touch');
+        const tiltBtn = document.getElementById('control-tilt');
         
         const updateControlUI = () => {
             if (touchBtn) touchBtn.classList.toggle('active', this.controlMode === 'touch');
@@ -544,16 +544,11 @@ class Game {
         
         const fallBtn = document.getElementById('mode-fall');
         if (fallBtn) {
-            if (this.bestHeight >= 500) {
-                fallBtn.classList.remove('disabled');
-                fallBtn.disabled = false;
-                fallBtn.innerText = 'FALL';
-            } else {
-                fallBtn.classList.add('disabled');
-                fallBtn.disabled = true;
-                fallBtn.innerText = 'FALL 🔒';
-            }
+            fallBtn.classList.add('disabled');
+            fallBtn.disabled = true;
+            fallBtn.innerText = 'FALL 🔒';
         }
+
     }
 
     startGame(diff) {
@@ -933,8 +928,8 @@ class Game {
     }
 
     setGameMode(mode) {
-        if (mode === 'fall' && this.bestHeight < 500) {
-            console.log("Fall mode is locked! Reach 500 height.");
+        if (mode === 'fall') {
+            console.log("Fall mode is locked!");
             return;
         }
 
@@ -945,7 +940,10 @@ class Game {
             const climbBtn = document.getElementById('mode-climb');
             const fallBtn = document.getElementById('mode-fall');
             if (climbBtn) climbBtn.classList.toggle('active', mode === 'climb');
-            if (fallBtn) fallBtn.classList.toggle('active', mode === 'fall');
+            if (fallBtn) {
+                fallBtn.classList.toggle('active', mode === 'fall');
+                fallBtn.classList.add('disabled');
+            }
             
             console.log("Switched mode to:", mode);
             if (this.audioManager) this.audioManager.playUI();
@@ -1042,7 +1040,6 @@ class Game {
             'stats-total-deaths': this.gamesPlayed,
             'stats-total-coins': this.totalCoinsAcc
         };
-
         Object.entries(stats).forEach(([id, val]) => {
             const el = document.getElementById(id);
             if (el) el.innerText = val;

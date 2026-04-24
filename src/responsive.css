@@ -8,32 +8,37 @@
     }
 
     .screen-scroll-container {
-        padding-top: calc(90px + env(safe-area-inset-top, 0px)) !important;
-        padding-bottom: 120px !important;
+        padding-top: calc(95px + env(safe-area-inset-top, 0px)) !important;
+        padding-bottom: 200px !important;
+        height: 100vh;
+        overflow-y: auto;
     }
 
     .close-btn {
-        top: calc(25px + env(safe-area-inset-top, 0px));
-        right: 20px;
-        width: 62px; /* Larger for mobile */
-        height: 62px;
+        top: calc(20px + env(safe-area-inset-top, 0px));
+        left: 20px;
+        right: auto;
+        width: 58px;
+        height: 58px;
         border-radius: 50%;
-        background: rgba(0, 0, 0, 0.7); 
-        backdrop-filter: blur(10px);
-        border: 2px solid rgba(255, 255, 255, 0.2);
-        font-size: 2.2rem;
+        background: rgba(255, 255, 255, 0.08); 
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #fff;
+        font-size: 2rem;
         line-height: 1;
         display: flex;
         align-items: center;
         justify-content: center;
         z-index: 11000;
         pointer-events: auto !important;
-        touch-action: none;
-        transition: transform 0.2s;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
 
     .close-btn:active {
-        transform: scale(0.9);
+        transform: scale(0.9) translateY(2px);
     }
 
     /* HUD Adjustments */
@@ -317,6 +322,29 @@
         line-height: 1;
     }
 
+    .hud-bar {
+        padding: calc(10px + env(safe-area-inset-top, 0px)) 10px 10px 10px;
+    }
+
+    .hud-item {
+        padding: 6px 12px;
+        font-size: 0.75rem;
+        gap: 5px;
+    }
+
+    .hud-icon {
+        font-size: 0.9rem;
+    }
+
+    .hud-group {
+        gap: 3px;
+    }
+
+    .header-right {
+        padding-right: 12px;
+        gap: 6px;
+    }
+
     .skin-grid {
         grid-template-columns: 1fr;
         width: min(100%, 420px);
@@ -345,8 +373,97 @@
         gap: 10px;
     }
 
+
     .reward-card {
         padding: 16px 12px;
     }
 
 }
+
+/* --- Small Height Devices (e.g. landscape or small phones) --- */
+@media (max-height: 660px) {
+    .home-main-content {
+        gap: 10px !important;
+        padding-top: calc(40px + env(safe-area-inset-top, 0px)) !important;
+    }
+
+    .best-score-banner {
+        padding: 5px 15px !important;
+        transform: scale(0.9);
+    }
+
+    .difficulty-section {
+        margin-bottom: 5px !important;
+    }
+
+    .section-title {
+        margin-bottom: 10px !important;
+        font-size: 0.8rem !important;
+    }
+
+    .diff-card {
+        padding: 10px !important;
+    }
+
+    .minimal-start-btn {
+        padding: 12px 25px !important;
+        min-height: 60px !important;
+    }
+}
+
+/* --- Ultra Small Devices (e.g. older phones or very small height) --- */
+@media (max-height: 620px), (max-width: 340px) {
+    .home-main-content {
+        transform: scale(0.85);
+        transform-origin: center top;
+        margin-top: -10px;
+        margin-bottom: -15vh; /* Offset for scaled height */
+    }
+
+    .best-score-banner {
+        transform: scale(0.8);
+        margin: 5px auto !important;
+    }
+
+    .hero-section {
+        gap: 8px !important;
+    }
+
+    .game-logo-img {
+        width: 70px !important;
+    }
+
+    .hud-bar {
+        transform: scale(0.85);
+        transform-origin: left top;
+        width: 117%; /* Compensate for scale */
+    }
+
+    .exit-btn {
+        transform: scale(0.8);
+        top: calc(70px + env(safe-area-inset-top, 0px)) !important;
+    }
+
+    .setting-item {
+        padding: 12px 15px !important;
+    }
+
+    .setting-label {
+        font-size: 0.75rem !important;
+    }
+
+    .seg-btn {
+        padding: 6px 12px !important;
+        font-size: 0.65rem !important;
+    }
+
+    .close-btn {
+        width: 48px !important;
+        height: 48px !important;
+        font-size: 1.4rem !important;
+        top: calc(15px + env(safe-area-inset-top, 0px)) !important;
+        left: 15px !important;
+        right: auto !important;
+    }
+}
+

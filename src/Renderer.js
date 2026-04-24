@@ -163,10 +163,10 @@ export class Renderer {
 
         if (this.game.player) {
             const viewportHeight = this.canvas.height / scale;
-            // Adaptive camera offset: keep the player more central on tall screens
+            // Adaptive camera offset: keep the player above the mobile buttons
             const offset = (this.game.modeStrategy && this.game.modeStrategy.name === 'fall') 
-                ? -viewportHeight * 0.20 
-                : (viewportHeight * 0.35);
+                ? -viewportHeight * 0.25 
+                : (viewportHeight * 0.15);
             const targetY = -this.game.player.position.y + viewportHeight / 2 + offset;
             
             if (!isNaN(targetY)) {

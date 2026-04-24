@@ -175,7 +175,7 @@ body.menu-open #btn-exit-game {
   display: flex;
   align-items: flex-start;
   width: 100%;
-  padding: calc(15px + env(safe-area-inset-top, 0px)) 20px 15px 20px;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 15px 10px 15px;
   pointer-events: none;
 }
 
@@ -195,13 +195,13 @@ body.menu-open #btn-exit-game {
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  padding: 8px 18px;
+  padding: 6px 14px;
   border-radius: 50px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   font-weight: 900;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   color: #fff;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
   transition: all 0.3s ease;
@@ -1034,15 +1034,20 @@ span.skin-preview-eye {
     radial-gradient(circle at 0% 0%, rgba(157, 0, 255, 0.15) 0%, transparent 50%),
     radial-gradient(circle at 100% 100%, rgba(0, 209, 255, 0.15) 0%, transparent 50%),
     radial-gradient(circle at center, rgba(15, 10, 30, 0.98) 0%, #07070a 100%);
-  overflow: hidden;
-  padding: calc(65px + env(safe-area-inset-top, 0px)) 15px 20px 15px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   position: relative;
   width: 100%;
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between; /* Dynamic spacing */
+  padding: 0;
+}
+
+#difficulty-screen > * {
+    flex-shrink: 0;
 }
 
 #difficulty-screen .menu-logo-container {
@@ -1117,12 +1122,26 @@ span.skin-preview-eye {
   box-shadow: 0 0 20px rgba(157, 0, 255, 0.3);
 }
 
-.toggle-btn.disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  filter: grayscale(1);
-  color: rgba(255, 255, 255, 0.35);
-  pointer-events: none;
+.seg-btn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+    filter: grayscale(0.8);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Scroll Container Base Styles */
+.screen-scroll-container {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    position: relative;
 }
 
 .slider-row {
@@ -1600,15 +1619,15 @@ body.menu-open .screen-overlay {
 
 .exit-btn {
   position: fixed;
-  top: 85px;
-  left: 15px;
+  top: calc(85px + env(safe-area-inset-top, 0px));
+  left: 25px;
   background: rgba(255, 62, 62, 0.15);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 62, 62, 0.3);
   color: #fff;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   display: flex !important;
   align-items: center;
   justify-content: center;
@@ -2341,22 +2360,62 @@ body.menu-open .screen-overlay {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 20px;
+    padding: 18px 20px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
-.setting-item.last-item {
-    border-bottom: none;
+
+.setting-item.vertical {
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
+    gap: 12px;
 }
+
 .setting-label {
-    font-size: 0.75rem;
-    font-weight: 900;
-    color: #fff;
-    letter-spacing: 2px;
-    opacity: 0.8;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    text-transform: uppercase;
 }
+
+/* Segmented Control Styles */
+.segmented-control {
+    display: flex;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 4px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.seg-btn {
+    padding: 8px 16px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.4);
+    font-family: var(--font-main);
+    font-weight: 800;
+    font-size: 0.7rem;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    letter-spacing: 1px;
+}
+
+.seg-btn.active {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.seg-btn.disabled, .seg-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+    filter: grayscale(0.8);
+    background: rgba(255, 255, 255, 0.02);
+}
+
 .minimal-difficulty-list {
     display: flex;
     flex-direction: column;
@@ -2368,11 +2427,11 @@ body.menu-open .screen-overlay {
 .diff-card {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 20px;
-    padding: 16px 24px;
+    border-radius: 18px;
+    padding: 12px 20px;
     display: flex;
     align-items: center;
-    gap: 18px;
+    gap: 14px;
     cursor: pointer;
     transition: all 0.4s cubic-bezier(0.2, 0, 0.2, 1);
     position: relative;
@@ -2419,7 +2478,7 @@ body.menu-open .screen-overlay {
     top: 0;
     left: 0;
     right: 0;
-    padding: calc(10px + env(safe-area-inset-top, 0px)) 15px 0 15px;
+    padding: calc(10px + env(safe-area-inset-top, 0px)) 25px 0 25px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -2441,6 +2500,7 @@ body.menu-open .screen-overlay {
     display: flex;
     align-items: center;
     gap: clamp(6px, 2vw, 10px);
+    flex-shrink: 0;
 }
 
 .header-right {
@@ -2460,10 +2520,10 @@ body.menu-open .screen-overlay {
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 50px;
-    padding: 4px 14px 4px 4px;
+    padding: 3px 12px 3px 3px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     transition: all 0.3s;
 }
@@ -2474,8 +2534,8 @@ body.menu-open .screen-overlay {
 }
 
 .skin-avatar {
-    width: 38px;
-    height: 38px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     background: rgba(0, 0, 0, 0.4);
     display: flex;
@@ -2487,9 +2547,9 @@ body.menu-open .screen-overlay {
 
 .header-name {
     font-weight: 800;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: #fff;
-    max-width: 80px;
+    max-width: 60px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2499,12 +2559,12 @@ body.menu-open .screen-overlay {
     background: linear-gradient(135deg, rgba(255, 204, 0, 0.1), rgba(255, 140, 0, 0.05));
     border: 1px solid rgba(255, 204, 0, 0.3);
     border-radius: 50px;
-    padding: 8px 22px;
+    padding: 6px 16px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     font-weight: 900;
-    font-size: 0.95rem;
+    font-size: 0.8rem;
     color: #ffcc00;
     backdrop-filter: blur(10px);
     box-shadow: 0 0 25px rgba(255, 204, 0, 0.1), inset 0 0 10px rgba(255, 204, 0, 0.05);
@@ -2520,8 +2580,8 @@ body.menu-open .screen-overlay {
 /* --- Minimalist Action UI --- */
 
 .header-icon-btn {
-    width: 54px;
-    height: 54px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.15);
@@ -2538,6 +2598,41 @@ body.menu-open .screen-overlay {
     position: relative;
     z-index: 6000;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.close-btn {
+    position: fixed !important;
+    top: calc(20px + env(safe-area-inset-top, 0px));
+    left: 20px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    cursor: pointer;
+    z-index: 11000 !important;
+    transition: all 0.3s;
+    pointer-events: auto !important;
+}
+
+.screen-scroll-container {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    position: relative;
 }
 
 .header-icon-btn:hover {
@@ -2577,21 +2672,27 @@ body.menu-open .screen-overlay {
 }
 
 /* Home Main Content Adjustments */
+.hero-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 5px;
+    text-align: center;
+    animation: fadeInUp 1s cubic-bezier(0.19, 1, 0.22, 1) both;
+}
+
 .home-main-content {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: space-evenly; /* Dynamic distribution */
-    height: 100%;
+    justify-content: center;
+    flex-shrink: 0;
     width: 100%;
-    padding: calc(80px + env(safe-area-inset-top, 0px)) 20px calc(100px + env(safe-area-inset-bottom, 0px)) 20px;
+    padding: calc(90px + env(safe-area-inset-top, 0px)) 20px 40px 20px;
     box-sizing: border-box;
-}
-
-.hero-section {
-    text-align: center;
-    margin-bottom: 20px;
-    animation: fadeInUp 1s cubic-bezier(0.19, 1, 0.22, 1) both;
+    gap: 15px;
+    margin: auto 0;
 }
 
 .best-score-banner {
@@ -2635,7 +2736,7 @@ body.menu-open .screen-overlay {
 .difficulty-section {
     width: 100%;
     max-width: 320px;
-    margin-bottom: 35px; /* Reduced from 50px to stay tight */
+    margin-bottom: 8px;
     animation: fadeInUp 1s 0.2s cubic-bezier(0.19, 1, 0.22, 1) both;
 }
 
@@ -2651,28 +2752,28 @@ body.menu-open .screen-overlay {
 .minimal-start-btn {
     position: relative;
     width: min(340px, 90vw);
-    min-height: 85px;
+    min-height: 72px;
     background: #0f0a1e;
     border: 1px solid rgba(157, 0, 255, 0.3);
     border-radius: 50px;
     display: flex;
     align-items: center;
-    padding: 0 10px;
+    padding: 0 8px;
     cursor: pointer;
     transition: all 0.4s cubic-bezier(0.2, 0, 0.2, 1);
     box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5), 0 0 15px rgba(157, 0, 255, 0.1);
-    margin: 20px 0;
+    margin: 10px 0;
 }
 
 .start-icon-circle {
-    width: 65px;
-    height: 65px;
+    width: 56px;
+    height: 56px;
     background: rgba(157, 0, 255, 0.15);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.8rem;
+    font-size: 1.5rem;
     color: #c97dff;
     box-shadow: 0 0 20px rgba(157, 0, 255, 0.3), inset 0 0 10px rgba(157, 0, 255, 0.2);
     transition: all 0.4s;
@@ -2681,16 +2782,16 @@ body.menu-open .screen-overlay {
 .minimal-start-btn .btn-text {
     flex: 1;
     text-align: center;
-    font-size: 1.25rem;
+    font-size: 1.1rem;
     font-weight: 900;
-    letter-spacing: 6px;
+    letter-spacing: 4px;
     color: #fff;
     text-transform: uppercase;
 }
 
 .btn-chevron {
-    width: 65px;
-    font-size: 2.2rem;
+    width: 56px;
+    font-size: 1.8rem;
     color: #9d00ff;
     opacity: 0.8;
     text-align: center;
@@ -2712,13 +2813,13 @@ body.menu-open .screen-overlay {
 }
 
 .home-footer {
-    position: absolute;
-    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
     width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 15px;
+    padding: 20px 20px calc(40px + env(safe-area-inset-bottom, 0px)) 20px;
+    flex-shrink: 0;
     animation: fadeInUp 1s 0.6s cubic-bezier(0.19, 1, 0.22, 1) both;
 }
 

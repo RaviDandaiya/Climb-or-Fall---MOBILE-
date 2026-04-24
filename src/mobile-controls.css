@@ -1,7 +1,7 @@
 /* Mobile Controls - Dedicated Buttons Layout */
 #mobile-controls {
     position: absolute;
-    bottom: calc(30px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
     left: 20px;
     right: 20px;
     pointer-events: none;
@@ -19,12 +19,12 @@
 }
 
 .touch-btn {
-    width: 82px;
-    height: 82px;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03));
+    width: 78px;
+    height: 78px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.01));
     backdrop-filter: blur(16px) saturate(180%);
     -webkit-backdrop-filter: blur(16px) saturate(180%);
-    border: 1.5px solid rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 22px;
     display: flex;
     align-items: center;
@@ -34,7 +34,7 @@
     user-select: none;
     -webkit-tap-highlight-color: transparent;
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.02);
 }
 
 .touch-btn:active {
@@ -45,11 +45,11 @@
 }
 
 .touch-btn-jump {
-    width: 95px;
-    height: 95px;
-    background: linear-gradient(135deg, rgba(0, 255, 163, 0.2), rgba(0, 255, 163, 0.05));
-    border-color: rgba(0, 255, 163, 0.4);
-    box-shadow: 0 12px 50px rgba(0, 255, 163, 0.15);
+    width: 90px;
+    height: 90px;
+    background: linear-gradient(135deg, rgba(0, 255, 163, 0.12), rgba(0, 255, 163, 0.02));
+    border-color: rgba(0, 255, 163, 0.2);
+    box-shadow: 0 8px 30px rgba(0, 255, 163, 0.08);
     font-size: 3rem;
 }
 
@@ -63,7 +63,7 @@
     position: relative;
     width: 68px !important;
     height: 68px !important;
-    background: linear-gradient(135deg, rgba(0, 209, 255, 0.15), rgba(157, 0, 255, 0.1)) !important;
+    background: linear-gradient(135deg, rgba(0, 209, 255, 0.1), rgba(157, 0, 255, 0.05)) !important;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1.5px solid rgba(0, 209, 255, 0.3) !important;
@@ -120,18 +120,33 @@
 
 @media (max-width: 480px) {
     .touch-btn {
-        width: 72px;
-        height: 72px;
-        font-size: 1.8rem;
+        width: 68px;
+        height: 68px;
+        font-size: 1.6rem;
     }
     .touch-btn-jump {
-        width: 88px;
-        height: 88px;
-        font-size: 2.2rem;
+        width: 82px;
+        height: 82px;
+        font-size: 2rem;
     }
     .floating-power {
-        width: 60px !important;
-        height: 60px !important;
+        width: 54px !important;
+        height: 54px !important;
+        font-size: 1.2rem;
+    }
+}
+@media (max-height: 600px) {
+    #mobile-controls {
+        bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+    }
+    .touch-btn {
+        width: 60px;
+        height: 60px;
         font-size: 1.4rem;
+    }
+    .touch-btn-jump {
+        width: 74px;
+        height: 74px;
+        font-size: 1.8rem;
     }
 }
