@@ -21,9 +21,8 @@
 .touch-btn {
     width: 78px;
     height: 78px;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.01));
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+    /* Removed backdrop-filter to fix severe mobile device lag */
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 22px;
     display: flex;
@@ -63,9 +62,8 @@
     position: relative;
     width: 68px !important;
     height: 68px !important;
-    background: linear-gradient(135deg, rgba(0, 209, 255, 0.1), rgba(157, 0, 255, 0.05)) !important;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: linear-gradient(135deg, rgba(0, 209, 255, 0.15), rgba(157, 0, 255, 0.1)) !important;
+    /* Removed backdrop-filter to fix severe mobile device lag */
     border: 1.5px solid rgba(0, 209, 255, 0.3) !important;
     border-radius: 50% !important;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5) !important;
@@ -86,8 +84,8 @@
 }
 
 @keyframes energy-pulse {
-    0%, 100% { filter: drop-shadow(0 0 4px rgba(0, 209, 255, 0.2)); transform: scale(1); }
-    50% { filter: drop-shadow(0 0 12px rgba(0, 209, 255, 0.5)); transform: scale(1.03); }
+    0%, 100% { box-shadow: 0 0 10px rgba(0, 209, 255, 0.2), 0 8px 25px rgba(0, 0, 0, 0.5); transform: scale(1); }
+    50% { box-shadow: 0 0 20px rgba(0, 209, 255, 0.5), 0 8px 25px rgba(0, 0, 0, 0.5); transform: scale(1.03); }
 }
 
 .floating-power.ad-required {
