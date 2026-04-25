@@ -753,10 +753,10 @@ class Game {
         const powerDashPressed = this.inputManager.consume('PowerDash');
         if (powerDashPressed && this.dashCooldown <= 0) {
             const dashVx = this.player.velocity.x > 0 ? horizForce * 2 : -horizForce * 2;
-            if (this.powerUsesSinceAd < 3) {
+            if (true) { // Ads disabled
                 if (this.modeStrategy.handleDash) {
                     this.modeStrategy.handleDash(this, dashVx);
-                    this.powerUsesSinceAd++;
+                    this.powerUsesSinceAd = 0; // Infinite uses
                 }
             } else {
                 if (this.adManager) this.adManager.startPowerAd(dashVx);
@@ -906,7 +906,7 @@ class Game {
 
         const overlay = powerBtn.querySelector('.dash-cooldown-overlay');
         const isCoolingDown = this.dashCooldown > 0 && this.maxDashCooldown > 0;
-        const needsAd = !isCoolingDown && this.powerUsesSinceAd >= 3;
+        const needsAd = false; // Ads disabled
         const rechargeProgress = isCoolingDown
             ? Math.max(0, Math.min(1, 1 - (this.dashCooldown / this.maxDashCooldown)))
             : 1;
