@@ -143,14 +143,19 @@ export class Renderer {
         if (!ctx) return;
         const time = performance.now();
 
+        const isMobile = window.innerWidth <= 768;
         // 1. Clear with animated gradient background
-        const bgTime = time / 2000;
-        const bgOffset1 = Math.sin(bgTime) * 300;
-        const bgOffset2 = Math.cos(bgTime) * 300;
-        const grad = ctx.createLinearGradient(0, bgOffset1, 0, Math.max(window.innerHeight, this.canvas.height) + bgOffset2);
-        grad.addColorStop(0, this.game.currentTheme.bg[0]);
-        grad.addColorStop(1, this.game.currentTheme.bg[1]);
-        ctx.fillStyle = grad;
+        if (isMobile) {
+            ctx.fillStyle = this.game.currentTheme.bg[1] || '#000';
+        } else {
+            const bgTime = time / 2000;
+            const bgOffset1 = Math.sin(bgTime) * 300;
+            const bgOffset2 = Math.cos(bgTime) * 300;
+            const grad = ctx.createLinearGradient(0, bgOffset1, 0, Math.max(window.innerHeight, this.canvas.height) + bgOffset2);
+            grad.addColorStop(0, this.game.currentTheme.bg[0]);
+            grad.addColorStop(1, this.game.currentTheme.bg[1]);
+            ctx.fillStyle = grad;
+        }
         ctx.fillRect(0, 0, this.canvas.width + 1000, this.canvas.height + 1000);
 
         // 2. Camera & Global Transform
@@ -293,26 +298,34 @@ export class Renderer {
                 ctx.save();
                 if (isFall && (w > 250 || h > 40)) {
                     // Draw as iron wall segment
-                    const grad = ctx.createLinearGradient(0, p.bounds.min.y, 0, p.bounds.max.y);
-                    grad.addColorStop(0, '#444'); grad.addColorStop(0.5, '#666'); grad.addColorStop(1, '#333');
-                    ctx.fillStyle = grad;
+                    if (window.innerWidth <= 768) {
+                        ctx.fillStyle = '#555';
+                    } else {
+                        const grad = ctx.createLinearGradient(0, p.bounds.min.y, 0, p.bounds.max.y);
+                        grad.addColorStop(0, '#444'); grad.addColorStop(0.5, '#666'); grad.addColorStop(1, '#333');
+                        ctx.fillStyle = grad;
+                    }
                     ctx.fillRect(p.bounds.min.x, p.bounds.min.y, w, h);
                     ctx.strokeStyle = '#222'; ctx.lineWidth = 2;
                     ctx.strokeRect(p.bounds.min.x, p.bounds.min.y, w, h);
                 } else if (p.isCrumbling && p.crumbleTimer > 0) {
                     const shake = Math.sin(time * 0.1) * 3;
                     ctx.translate(shake, 0);
-                    ctx.filter = 'contrast(1.5) brightness(1.2)';
+                    ctx.filter = window.innerWidth <= 768 ? 'none' : 'contrast(1.5) brightness(1.2)';
                     ctx.fillStyle = '#ffae00';
                     this.roundRect(ctx, p.position.x - w / 2, p.position.y - 6, w, 15, 4);
                     ctx.fill();
                 } else if (p.isSafety) {
                     // Draw the "Holy Wall" safety platform
-                    const grad = ctx.createLinearGradient(p.bounds.min.x, 0, p.bounds.max.x, 0);
-                    grad.addColorStop(0, 'rgba(0, 255, 136, 0)');
-                    grad.addColorStop(0.5, 'rgba(0, 255, 136, 0.8)');
-                    grad.addColorStop(1, 'rgba(0, 255, 136, 0)');
-                    ctx.fillStyle = grad;
+                    if (window.innerWidth <= 768) {
+                        ctx.fillStyle = 'rgba(0, 255, 136, 0.4)';
+                    } else {
+                        const grad = ctx.createLinearGradient(p.bounds.min.x, 0, p.bounds.max.x, 0);
+                        grad.addColorStop(0, 'rgba(0, 255, 136, 0)');
+                        grad.addColorStop(0.5, 'rgba(0, 255, 136, 0.8)');
+                        grad.addColorStop(1, 'rgba(0, 255, 136, 0)');
+                        ctx.fillStyle = grad;
+                    }
                     ctx.fillRect(p.bounds.min.x, p.bounds.min.y, w, h);
                     
                     // Add a glowing core
@@ -339,11 +352,15 @@ export class Renderer {
 
                 if (p.isLaser) {
                     if (p.laserState === 'on') {
-                        const grad = ctx.createLinearGradient(0, yTop, 0, yBottom);
-                        grad.addColorStop(0, 'rgba(255, 0, 80, 0)');
-                        grad.addColorStop(0.5, 'rgba(255, 0, 80, 0.9)');
-                        grad.addColorStop(1, 'rgba(255, 0, 80, 0)');
-                        ctx.fillStyle = grad;
+                        if (window.innerWidth <= 768) {
+                            ctx.fillStyle = 'rgba(255, 0, 80, 0.5)';
+                        } else {
+                            const grad = ctx.createLinearGradient(0, yTop, 0, yBottom);
+                            grad.addColorStop(0, 'rgba(255, 0, 80, 0)');
+                            grad.addColorStop(0.5, 'rgba(255, 0, 80, 0.9)');
+                            grad.addColorStop(1, 'rgba(255, 0, 80, 0)');
+                            ctx.fillStyle = grad;
+                        }
                         ctx.fillRect(p.bounds.min.x, yTop - 10, w, h + 20);
                         
                         ctx.strokeStyle = '#ff0055'; ctx.lineWidth = 2;
@@ -356,9 +373,13 @@ export class Renderer {
                 }
 
                 if (isFall) {
-                    const grad = ctx.createLinearGradient(0, yTop, 0, yBottom);
-                    grad.addColorStop(0, '#555'); grad.addColorStop(0.5, '#aaa'); grad.addColorStop(1, '#333');
-                    ctx.fillStyle = grad;
+                    if (window.innerWidth <= 768) {
+                        ctx.fillStyle = '#888';
+                    } else {
+                        const grad = ctx.createLinearGradient(0, yTop, 0, yBottom);
+                        grad.addColorStop(0, '#555'); grad.addColorStop(0.5, '#aaa'); grad.addColorStop(1, '#333');
+                        ctx.fillStyle = grad;
+                    }
                     ctx.fillRect(p.bounds.min.x, yTop, w, h);
                     
                     if (p.hasSpikes) {
@@ -407,10 +428,14 @@ export class Renderer {
             const glowC = p.powerupType === 'shield' ? 'rgba(0, 209, 255, 0.4)' : (p.powerupType === 'magnet' ? 'rgba(255, 62, 62, 0.4)' : 'rgba(100, 100, 100, 0.6)');
             const strokeC = p.powerupType === 'shield' ? '#00d1ff' : (p.powerupType === 'magnet' ? '#ff3e3e' : '#888');
 
-            const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, 25);
-            glow.addColorStop(0, glowC);
-            glow.addColorStop(1, 'transparent');
-            ctx.fillStyle = glow;
+            if (window.innerWidth <= 768) {
+                ctx.fillStyle = glowC;
+            } else {
+                const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, 25);
+                glow.addColorStop(0, glowC);
+                glow.addColorStop(1, 'transparent');
+                ctx.fillStyle = glow;
+            }
             ctx.beginPath();
             ctx.arc(0, 0, 25, 0, Math.PI * 2);
             ctx.fill();
@@ -488,11 +513,15 @@ export class Renderer {
             }
             ctx.closePath();
             
-            const grad = ctx.createLinearGradient(0, drawLavaPos, 0, screenTop);
-            grad.addColorStop(0, '#ff0000'); // Menacing red tips
-            grad.addColorStop(0.3, '#880000');
-            grad.addColorStop(1, '#220000');
-            ctx.fillStyle = grad;
+            if (window.innerWidth <= 768) {
+                ctx.fillStyle = '#aa0000';
+            } else {
+                const grad = ctx.createLinearGradient(0, drawLavaPos, 0, screenTop);
+                grad.addColorStop(0, '#ff0000'); // Menacing red tips
+                grad.addColorStop(0.3, '#880000');
+                grad.addColorStop(1, '#220000');
+                ctx.fillStyle = grad;
+            }
             ctx.fill();
         } else {
             // CLIMB MODE: Wave/Lava at the bottom
@@ -506,11 +535,15 @@ export class Renderer {
             }
             ctx.closePath();
             
-            const grad = ctx.createLinearGradient(0, drawLavaPos, 0, screenBottom);
-            grad.addColorStop(0, '#ffcc00');
-            grad.addColorStop(0.2, '#ff3300');
-            grad.addColorStop(1, '#660000');
-            ctx.fillStyle = grad;
+            if (window.innerWidth <= 768) {
+                ctx.fillStyle = '#ff3300';
+            } else {
+                const grad = ctx.createLinearGradient(0, drawLavaPos, 0, screenBottom);
+                grad.addColorStop(0, '#ffcc00');
+                grad.addColorStop(0.2, '#ff3300');
+                grad.addColorStop(1, '#660000');
+                ctx.fillStyle = grad;
+            }
             ctx.fill();
         }
         ctx.restore();
