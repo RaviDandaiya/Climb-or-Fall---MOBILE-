@@ -38,7 +38,8 @@ class Game {
         this.pool = { platform: [], pillar: [], coin: [], powerup: [], enemy: [] };
         // Initialize background particles (stars/rain/etc)
         this.stars = [];
-        for (let i = 0; i < 150; i++) {
+        const numStars = window.innerWidth <= 768 ? 50 : 150;
+        for (let i = 0; i < numStars; i++) {
             this.stars.push({
                 x: Math.random() * CONFIG.canvasWidth, // Using logical world width
                 y: Math.random() * 4000,
@@ -116,7 +117,7 @@ class Game {
             const tick = () => {
                 try {
                     if (this.gameState === 'PLAYING' && !this.isGameOver && !this.isAdPlaying) {
-                        const substeps = 6;
+                        const substeps = 2;
                         const stepSize = 16.666 / substeps;
                         for (let i = 0; i < substeps; i++) {
                             Engine.update(this.engine, stepSize);

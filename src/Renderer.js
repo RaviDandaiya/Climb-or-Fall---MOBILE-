@@ -316,7 +316,7 @@ export class Renderer {
                     ctx.fillRect(p.bounds.min.x, p.bounds.min.y, w, h);
                     
                     // Add a glowing core
-                    ctx.shadowBlur = 15;
+                    ctx.shadowBlur = window.innerWidth <= 768 ? 0 : 15;
                     ctx.shadowColor = '#00ff88';
                     ctx.fillStyle = '#ffffff';
                     ctx.fillRect(p.bounds.min.x, p.position.y - 2, w, 4);
@@ -578,14 +578,14 @@ export class Renderer {
 
             // Add Bloom/Glow to character when powered up
             if (this.game.hasShield || this.game.magnetTimer > 0) {
-                ctx.shadowBlur = 15;
+                ctx.shadowBlur = window.innerWidth <= 768 ? 0 : 15;
                 ctx.shadowColor = this.game.hasShield ? '#00d1ff' : '#ff3e3e';
             }
 
             ctx.save();
             ctx.rotate(this.game.player.angle);
             this.drawPlayerBody(ctx, skin, CONFIG.playerRadius);
-            ctx.shadowBlur = 10;
+            ctx.shadowBlur = window.innerWidth <= 768 ? 0 : 10;
             ctx.shadowColor = glowColor;
             ctx.strokeStyle = strokeColor;
             ctx.lineWidth = 4;
