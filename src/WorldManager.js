@@ -22,14 +22,9 @@ export class WorldManager {
             label: 'floor',
             friction: 0.2
         });
-        // Precise wall placement
-        game.leftWall = Bodies.rectangle(0, -5000, 40, 20000, {
-            isStatic: true, label: 'wall', friction: 0.1
-        });
-        game.rightWall = Bodies.rectangle(CONFIG.canvasWidth, -5000, 40, 20000, {
-            isStatic: true, label: 'wall', friction: 0.1
-        });
-        World.add(game.world, [floor, game.leftWall, game.rightWall]);
+        
+        // REMOVED side walls to allow smooth screen wrap-around
+        World.add(game.world, [floor]);
     }
 
     generateInitialPlatforms(settings) {
@@ -82,7 +77,8 @@ export class WorldManager {
     _addPillar(y, settings) {
         const game = this.game;
         let height = 100 + Math.random() * 150;
-        let x = Math.random() * (CONFIG.canvasWidth - 80) + 40;
+        // Keep pillars away from the exact screen edges to prevent wrap-around glitches
+        let x = Math.random() * (CONFIG.canvasWidth - 120) + 60;
 
         let attempts = 0;
         let hasOverlap = false;
@@ -368,11 +364,11 @@ export class WorldManager {
             Body.translate(e, { x: e.moveSpeed, y: 0 });
 
             // Enemy Screen wrap-around (matches player behavior)
-            // This prevents them from getting stuck at edges and following player across screen
-            if (e.position.x < -60) {
-                Body.setPosition(e, { x: CONFIG.canvasWidth + 50, y: e.position.y });
-            } else if (e.position.x > CONFIG.canvasWidth + 60) {
-                Body.setPosition(e, { x: -50, y: e.position.y });
+            // Using wider boundaries to prevent "death by teleport"
+            if (e.position.x < -80) {
+                Body.setPosition(e, { x: CONFIG.canvasWidth + 70, y: e.position.y });
+            } else if (e.position.x > CONFIG.canvasWidth + 80) {
+                Body.setPosition(e, { x: -70, y: e.position.y });
             }
         });
     }

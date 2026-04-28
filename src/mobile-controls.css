@@ -1,9 +1,9 @@
-/* Mobile Controls - Dedicated Buttons Layout */
+/* Mobile Controls - Redesigned Joystick Layout */
 #mobile-controls {
     position: absolute;
-    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
-    left: 20px;
-    right: 20px;
+    bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+    left: 40px;
+    right: 40px;
     pointer-events: none;
     z-index: 1000;
     display: flex;
@@ -13,62 +13,96 @@
 
 .controls-left, .controls-right {
     display: flex;
-    gap: 12px;
+    gap: 20px;
     align-items: center;
     pointer-events: auto;
 }
 
-.touch-btn {
-    width: 78px;
-    height: 78px;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-    /* Removed backdrop-filter to fix severe mobile device lag */
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 22px;
+/* Horizontal Joystick Base */
+#joystick-base {
+    position: relative;
+    width: 150px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2.4rem;
-    color: #ffffff;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+    box-shadow: 0 0 20px rgba(0,0,0,0.3);
+}
+
+/* Joystick Knob */
+#joystick-knob {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    transition: background 0.2s;
+    pointer-events: none;
+    z-index: 2;
+}
+
+#joystick-base:active #joystick-knob {
+    background: rgba(255, 255, 255, 0.6);
+}
+
+/* Joystick Decorative Arrows */
+.joystick-arrow {
+    position: absolute;
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 0.8rem;
+    pointer-events: none;
+}
+.joystick-arrow.up { top: 10px; }
+.joystick-arrow.down { bottom: 10px; }
+.joystick-arrow.left { left: 10px; }
+.joystick-arrow.right { right: 10px; }
+
+/* Circular Jump Button */
+.circular-jump-btn {
+    width: 100px;
+    height: 100px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.7);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
-.touch-btn:active {
+.circular-jump-btn:active {
+    transform: scale(0.9);
     background: rgba(255, 255, 255, 0.25);
-    transform: scale(0.9) translateY(2px);
     border-color: rgba(255, 255, 255, 0.6);
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.6);
+    color: #fff;
+    box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
 }
 
-.touch-btn-jump {
-    width: 90px;
-    height: 90px;
-    background: linear-gradient(135deg, rgba(0, 255, 163, 0.12), rgba(0, 255, 163, 0.02));
-    border-color: rgba(0, 255, 163, 0.2);
-    box-shadow: 0 8px 30px rgba(0, 255, 163, 0.08);
-    font-size: 3rem;
+.circular-jump-btn svg {
+    width: 50%;
+    height: 50%;
 }
 
-.touch-btn-jump:active {
-    background: rgba(0, 255, 163, 0.4);
-    border-color: rgba(0, 255, 163, 0.8);
-    box-shadow: 0 0 30px rgba(0, 255, 163, 0.4);
-}
-
+/* Power Button Adjustments */
 .floating-power {
     position: relative;
-    width: 68px !important;
-    height: 68px !important;
+    width: 60px !important;
+    height: 60px !important;
     background: linear-gradient(135deg, rgba(0, 209, 255, 0.15), rgba(157, 0, 255, 0.1)) !important;
-    /* Removed backdrop-filter to fix severe mobile device lag */
     border: 1.5px solid rgba(0, 209, 255, 0.3) !important;
     border-radius: 50% !important;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5) !important;
     color: white;
-    font-size: 1.8rem;
+    font-size: 1.6rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -77,34 +111,9 @@
     animation: energy-pulse 3s infinite;
 }
 
-.floating-power:active {
-    transform: scale(0.88);
-    background: rgba(0, 209, 255, 0.5) !important;
-    box-shadow: 0 0 40px rgba(0, 209, 255, 0.6) !important;
-}
-
 @keyframes energy-pulse {
     0%, 100% { box-shadow: 0 0 10px rgba(0, 209, 255, 0.2), 0 8px 25px rgba(0, 0, 0, 0.5); transform: scale(1); }
     50% { box-shadow: 0 0 20px rgba(0, 209, 255, 0.5), 0 8px 25px rgba(0, 0, 0, 0.5); transform: scale(1.03); }
-}
-
-.floating-power.ad-required {
-    border-color: #ffcc00 !important;
-    background: linear-gradient(135deg, rgba(255, 204, 0, 0.2), rgba(255, 204, 0, 0.05)) !important;
-}
-
-.floating-power.ad-required::after {
-    content: 'AD';
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    background: #ffcc00;
-    color: #000;
-    font-size: 0.65rem;
-    font-weight: 900;
-    padding: 2px 5px;
-    border-radius: 6px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.4);
 }
 
 .dash-cooldown-overlay {
@@ -117,34 +126,22 @@
 }
 
 @media (max-width: 480px) {
-    .touch-btn {
-        width: 68px;
-        height: 68px;
-        font-size: 1.6rem;
+    #joystick-base {
+        width: 110px;
+        height: 110px;
     }
-    .touch-btn-jump {
-        width: 82px;
-        height: 82px;
-        font-size: 2rem;
+    #joystick-knob {
+        width: 50px;
+        height: 50px;
     }
-    .floating-power {
-        width: 54px !important;
-        height: 54px !important;
-        font-size: 1.2rem;
+    .circular-jump-btn {
+        width: 85px;
+        height: 85px;
     }
-}
-@media (max-height: 600px) {
     #mobile-controls {
-        bottom: calc(40px + env(safe-area-inset-bottom, 0px));
-    }
-    .touch-btn {
-        width: 60px;
-        height: 60px;
-        font-size: 1.4rem;
-    }
-    .touch-btn-jump {
-        width: 74px;
-        height: 74px;
-        font-size: 1.8rem;
+        left: 25px;
+        right: 25px;
+        bottom: 50px;
     }
 }
+

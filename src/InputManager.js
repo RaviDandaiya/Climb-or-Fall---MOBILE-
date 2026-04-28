@@ -25,25 +25,23 @@ export class InputManager {
             this.keys[e.key] = false;
         });
 
-        // Mobile buttons
-        const bindZone = (id, key) => {
-            const el = document.getElementById(id);
-            if (!el) return;
+        // Initialize Virtual Joystick
+        this.setupJoystick();
+
+        // Circular Jump Button
+        const jumpBtn = document.getElementById('touch-jump');
+        if (jumpBtn) {
             const down = (e) => {
                 e.preventDefault();
-                this.keys[key] = true;
+                this.keys['TapJumpDirect'] = true;
                 try { if (game.audioManager) game.audioManager.resume(); } catch (_) {}
             };
-            const up = () => { this.keys[key] = false; };
-            el.addEventListener('pointerdown', down);
-            el.addEventListener('pointerup', up);
-            el.addEventListener('pointercancel', up);
-            el.addEventListener('pointerleave', up);
-        };
-
-        bindZone('touch-left', 'ArrowLeft');
-        bindZone('touch-right', 'ArrowRight');
-        bindZone('touch-jump', 'TapJumpDirect');
+            const up = () => { this.keys['TapJumpDirect'] = false; };
+            jumpBtn.addEventListener('pointerdown', down);
+            jumpBtn.addEventListener('pointerup', up);
+            jumpBtn.addEventListener('pointercancel', up);
+            jumpBtn.addEventListener('pointerleave', up);
+        }
 
         const btnPower = document.getElementById('btn-power');
         if (btnPower) {
@@ -65,27 +63,75 @@ export class InputManager {
             }
         });
 
-        // Canvas tap → jump (REMOVED to prevent auto-jump/accidental jumping)
-        /*
-        const handleTapStart = (e) => {
-            if (e.target.tagName !== 'BUTTON') {
-                e.preventDefault();
-                this.keys['TouchJump'] = true;
-                try { if (game.audioManager) game.audioManager.resume(); } catch (_) {}
-            }
-        };
-        const handleTapEnd = () => { this.keys['TouchJump'] = false; };
-
-        game.canvas.addEventListener('pointerdown', handleTapStart);
-        game.canvas.addEventListener('pointerup', handleTapEnd);
-        game.canvas.addEventListener('pointercancel', handleTapEnd);
-        game.canvas.addEventListener('pointerleave', handleTapEnd);
-        */
-
         // Control mode toggles
         this.setupControlModeToggles();
         // Game mode toggles
         this.setupGameModeToggles();
+    }
+
+    setupJoystick() {
+        const base = document.getElementById('joystick-base');
+        const knob = document.getElementById('joystick-knob');
+        if (!base || !knob) return;
+
+        let active = false;
+        let pointerId = null;
+
+        const moveKnob = (x, y) => {
+            const rect = base.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const maxDist = rect.width / 2;
+            
+            let dx = x - centerX;
+            // Lock vertical movement to 0
+            let dy = 0; 
+            
+            const dist = Math.abs(dx);
+            
+            if (dist > maxDist) {
+                dx *= maxDist / dist;
+            }
+
+            knob.style.transform = `translate(${dx}px, ${dy}px)`;
+
+            // Update Game Keys
+            const threshold = 10;
+            this.keys['ArrowLeft'] = dx < -threshold;
+            this.keys['ArrowRight'] = dx > threshold;
+        };
+
+        const handleDown = (e) => {
+            if (active) return;
+            active = true;
+            pointerId = e.pointerId;
+            base.setPointerCapture(e.pointerId);
+            moveKnob(e.clientX, e.clientY);
+            knob.style.background = 'rgba(255, 255, 255, 0.8)';
+            try { if (this.game.audioManager) this.game.audioManager.resume(); } catch (_) {}
+        };
+
+        const handleMove = (e) => {
+            if (!active || e.pointerId !== pointerId) return;
+            moveKnob(e.clientX, e.clientY);
+        };
+
+        const handleUp = (e) => {
+            if (e.pointerId !== pointerId) return;
+            active = false;
+            pointerId = null;
+            knob.style.transform = 'translate(0, 0)';
+            knob.style.background = 'rgba(255, 255, 255, 0.4)';
+            this.keys['ArrowLeft'] = false;
+            this.keys['ArrowRight'] = false;
+        };
+
+        base.addEventListener('pointerdown', handleDown);
+        base.addEventListener('pointermove', handleMove);
+        base.addEventListener('pointerup', handleUp);
+        base.addEventListener('pointercancel', handleUp);
+        
+        // Prevent default touch behavior (like scrolling) on the joystick
+        base.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
     }
 
     setupControlModeToggles() {

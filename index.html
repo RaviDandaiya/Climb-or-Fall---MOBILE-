@@ -110,18 +110,25 @@
             <button id="btn-exit-game" class="exit-btn">✕</button>
         </div>
 
-        <!-- Mobile Controls -->
+        <!-- Mobile Controls (Redesigned with Joystick) -->
         <div id="mobile-controls" class="hidden">
             <div class="controls-left">
-                <div id="touch-left" class="touch-btn">←</div>
-                <div id="touch-right" class="touch-btn">→</div>
+                <div id="joystick-base">
+                    <div id="joystick-knob"></div>
+                    <div class="joystick-arrow left">◀</div>
+                    <div class="joystick-arrow right">▶</div>
+                </div>
             </div>
             <div class="controls-right">
                 <button class="control-btn power-btn floating-power" id="btn-power">
                     <span class="btn-icon">⚡</span>
                     <div class="dash-cooldown-overlay"></div>
                 </button>
-                <div id="touch-jump" class="touch-btn touch-btn-jump">↑</div>
+                <div id="touch-jump" class="circular-jump-btn">
+                    <svg viewBox="0 0 24 24" width="48" height="48">
+                        <path fill="currentColor" d="M13,20V8.83L17.59,13.41L19,12L12,5L5,12L6.41,13.41L11,8.83V20H13Z" />
+                    </svg>
+                </div>
             </div>
         </div>
 

@@ -735,11 +735,12 @@ class Game {
             }
         }
 
-        // Screen wrap-around
-        if (this.player.position.x < -CONFIG.playerRadius) {
-            Body.setPosition(this.player, { x: CONFIG.canvasWidth + CONFIG.playerRadius, y: this.player.position.y });
-        } else if (this.player.position.x > CONFIG.canvasWidth + CONFIG.playerRadius) {
-            Body.setPosition(this.player, { x: -CONFIG.playerRadius, y: this.player.position.y });
+        // Smooth screen wrap-around
+        const wrapPadding = 30;
+        if (this.player.position.x < -wrapPadding) {
+            Body.setPosition(this.player, { x: CONFIG.canvasWidth + wrapPadding - 5, y: this.player.position.y });
+        } else if (this.player.position.x > CONFIG.canvasWidth + wrapPadding) {
+            Body.setPosition(this.player, { x: -wrapPadding + 5, y: this.player.position.y });
         }
 
         // Cooldowns
