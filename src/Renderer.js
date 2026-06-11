@@ -180,9 +180,9 @@ export class Renderer {
                     this.game._isResettingCamera = false;
                 } else {
                     this.game.cameraY += (targetY - this.game.cameraY) * 0.1;
-                    if (isNaN(this.game.cameraY)) this.game.cameraY = targetY;
                 }
             }
+            if (isNaN(this.game.cameraY)) this.game.cameraY = targetY || 0;
         }
         ctx.translate(0, this.game.cameraY || 0);
 

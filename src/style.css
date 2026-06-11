@@ -1147,6 +1147,7 @@ span.skin-preview-eye {
 #sensitivity-slider {
   flex: 1;
   -webkit-appearance: none;
+  appearance: none;
   height: 10px;
   border-radius: 999px;
   background: linear-gradient(90deg, #ff3e3e, #ff9a00, #00ffa3);

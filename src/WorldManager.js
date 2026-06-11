@@ -279,6 +279,7 @@ export class WorldManager {
             if (game.modeStrategy.shouldCullPlatform(e.position.y, ly, py)) {
                 World.remove(game.world, e);
                 game.enemies.splice(i, 1);
+                e.isStalker = false; // Reset stalker flag when putting back to pool
                 game.pool.enemy.push(e);
             }
         }
@@ -286,7 +287,7 @@ export class WorldManager {
         // Generate new
         const settings = DIFFICULTY_SETTINGS[game.difficulty];
         let nextY = game.modeStrategy.getNextPlatformY(game.platforms, py, settings);
-        while (nextY !== null && !game.isGameOver && game.platforms.length < 40) {
+        while (nextY !== null && !game.isGameOver && game.platforms.length < 150) {
             this.addPlatform(nextY, game.platforms.length);
             // Spawn enemies based on stage progression (e.g. stage 2+ starts regular spawns)
             const enemySpawnChance = 0.05 + (game.stage * 0.05); // Increases with stage
@@ -331,33 +332,9 @@ export class WorldManager {
             // and prevent far-away enemies from doing weird things
             if (distY > 1200) return;
 
-            if (e.isStalker) {
-                // Stalker AI: move towards player if vertically close
-                const distX = player.position.x - e.position.x;
-                
-                // Only charge if within a reasonable vertical range
-                if (distY < 450 && distY > 30) {
-                    // Charge! 
-                    const dir = distX > 0 ? 1 : -1;
-                    
-                    // Added a horizontal deadzone (20px) to prevent the "tethered" jitter effect
-                    if (Math.abs(distX) > 20) {
-                        // Use a speed that is slightly randomized and NOT exactly 7.5 (player speed)
-                        // to avoid the visual illusion of being tethered.
-                        const baseSpeed = 3 + (game.stage * 0.4);
-                        const randomVariation = (Math.sin(game.frameCount * 0.05) * 1); // Subtle wave
-                        e.moveSpeed = dir * (baseSpeed + randomVariation);
-                    } else {
-                        // Slow down when very close horizontally
-                        e.moveSpeed *= 0.9;
-                    }
-                } else {
-                    // Patrol if player is too far or vertically offset
-                    if (e.position.x < 40 || e.position.x > CONFIG.canvasWidth - 40) e.moveSpeed *= -1;
-                }
-            } else {
-                // Regular Patrol AI: keep it independent
-                if (e.position.x < 40 || e.position.x > CONFIG.canvasWidth - 40) e.moveSpeed *= -1;
+            // All enemies patrol independently and do not mirror/track player horizontal position
+            if (e.position.x < 40 || e.position.x > CONFIG.canvasWidth - 40) {
+                e.moveSpeed *= -1;
             }
             
             // Apply horizontal movement
@@ -434,6 +411,7 @@ export class WorldManager {
         const game = this.game;
         World.remove(game.world, body);
         game.enemies = game.enemies.filter(e => e !== body);
+        body.isStalker = false; // Reset stalker flag when putting back to pool
         game.pool.enemy.push(body);
         
         game.particleSystem.createExplosion(body.position, '#ff0044', 20);

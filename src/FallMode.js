@@ -142,6 +142,7 @@ export class FallMode {
                 enemy = Bodies.polygon(x, my, 8, 16, { isStatic: true, label: 'enemy', isSensor: true }); 
                 World.add(game.world, enemy);
             }
+            enemy.isStalker = false;
             enemy.moveSpeed = (Math.random() - 0.5) * 4;
             game.enemies.push(enemy);
         }
@@ -223,6 +224,7 @@ export class FallMode {
                 enemy = Bodies.polygon(bx, y, 8, 20 * scale, { isStatic: true, label: 'enemy', isSensor: true });
                 World.add(game.world, enemy);
             }
+            enemy.isStalker = false;
             enemy.moveSpeed = (Math.random() - 0.5) * 6;
             game.enemies.push(enemy);
         }

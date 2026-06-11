@@ -64,7 +64,7 @@ class Game {
         this.dashCooldown = 0;
         this.maxDashCooldown = 0;
         this.isDashingFrames = 0;
-        this.powerUsesSinceAd = 0;
+        this.powerCharges = 3;
         this.hasShield = false;
         this.shake = 0;
         this.dashEffectTimer = 0;
@@ -84,6 +84,7 @@ class Game {
         this.lavaSpeed = 0.6;
         this.lavaHeight = 2000;
         this.sensitivity = parseFloat(localStorage.getItem('sensitivity') || '1');
+        if (isNaN(this.sensitivity)) this.sensitivity = 1;
         this.controlMode = localStorage.getItem('controlMode') || 'touch';
         
         // --- New Audio & Haptic State ---
@@ -101,6 +102,7 @@ class Game {
         this.adManager = new AdManager(this);
 
         this.modeStrategy = new ClimbMode(this);
+        this.frameCount = 0;
 
         this.init();
     }
@@ -561,7 +563,7 @@ class Game {
         this.combo = 1;
         this.isGameOver = false;
         this.gameState = 'PLAYING';
-        this.powerUsesSinceAd = 0;
+        this.powerCharges = 3;
         this.dashCooldown = 0;
         this.isDashingFrames = 0;
         this.hasShield = false;
@@ -687,6 +689,7 @@ class Game {
 
     update() {
         if (this.isGameOver) return;
+        this.frameCount++;
         if (this.dashEffectTimer > 0) this.dashEffectTimer--;
         
         // --- MOVEMENT & INPUT ---
@@ -754,10 +757,11 @@ class Game {
         const powerDashPressed = this.inputManager.consume('PowerDash');
         if (powerDashPressed && this.dashCooldown <= 0) {
             const dashVx = this.player.velocity.x > 0 ? horizForce * 2 : -horizForce * 2;
-            if (true) { // Ads disabled
+            if (this.powerCharges > 0) {
                 if (this.modeStrategy.handleDash) {
                     this.modeStrategy.handleDash(this, dashVx);
-                    this.powerUsesSinceAd = 0; // Infinite uses
+                    this.powerCharges--;
+                    this.updatePowerButtonUI();
                 }
             } else {
                 if (this.adManager) this.adManager.startPowerAd(dashVx);
@@ -907,7 +911,7 @@ class Game {
 
         const overlay = powerBtn.querySelector('.dash-cooldown-overlay');
         const isCoolingDown = this.dashCooldown > 0 && this.maxDashCooldown > 0;
-        const needsAd = false; // Ads disabled
+        const needsAd = this.powerCharges <= 0;
         const rechargeProgress = isCoolingDown
             ? Math.max(0, Math.min(1, 1 - (this.dashCooldown / this.maxDashCooldown)))
             : 1;
@@ -916,6 +920,15 @@ class Game {
         powerBtn.classList.toggle('ad-required', needsAd);
         powerBtn.disabled = isCoolingDown;
         powerBtn.setAttribute('aria-disabled', String(isCoolingDown));
+
+        const btnIcon = powerBtn.querySelector('.btn-icon');
+        if (btnIcon) {
+            if (needsAd) {
+                btnIcon.innerHTML = '🎬';
+            } else {
+                btnIcon.innerHTML = `⚡<span class="charge-count">${this.powerCharges}</span>`;
+            }
+        }
 
         if (overlay) {
             if (isCoolingDown) {

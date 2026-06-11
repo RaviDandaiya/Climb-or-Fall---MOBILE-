@@ -128,8 +128,12 @@ export class AdManager {
 
         const grantPower = () => {
             game.isAdPlaying = false;
-            game.powerUsesSinceAd = 0;
-            if (game.modeStrategy.handleDash) game.modeStrategy.handleDash(game, targetVx);
+            game.powerCharges = 3;
+            if (game.modeStrategy.handleDash) {
+                game.modeStrategy.handleDash(game, targetVx);
+                game.powerCharges--;
+            }
+            game.updatePowerButtonUI();
         };
 
         if (!Capacitor.isNativePlatform()) {

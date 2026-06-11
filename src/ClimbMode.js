@@ -71,7 +71,7 @@ export class ClimbMode {
     }
 
     shouldCullPlatform(platformY, lavaY, playerY) {
-        return platformY > Math.min(lavaY, playerY + 1500);
+        return platformY > lavaY;
     }
 
     getNextPlatformY(platforms, playerY, settings) {

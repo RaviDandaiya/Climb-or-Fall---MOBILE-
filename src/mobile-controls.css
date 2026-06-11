@@ -145,3 +145,33 @@
     }
 }
 
+.floating-power.ad-required {
+    background: linear-gradient(135deg, rgba(255, 204, 0, 0.2), rgba(255, 154, 0, 0.15)) !important;
+    border-color: rgba(255, 204, 0, 0.5) !important;
+    animation: ad-pulse 3s infinite;
+}
+
+@keyframes ad-pulse {
+    0%, 100% { box-shadow: 0 0 10px rgba(255, 204, 0, 0.2), 0 8px 25px rgba(0, 0, 0, 0.5); transform: scale(1); }
+    50% { box-shadow: 0 0 20px rgba(255, 204, 0, 0.5), 0 8px 25px rgba(0, 0, 0, 0.5); transform: scale(1.03); }
+}
+
+.charge-count {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #ffcc00;
+    color: #000;
+    font-size: 0.75rem;
+    font-weight: 900;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    border: 1px solid #fff;
+    pointer-events: none;
+}
+
