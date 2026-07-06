@@ -82,7 +82,8 @@ export class ClimbMode {
         
         // 1. Standard: Generate upwards
         if (playerY < highestY + 2000) {
-            return highestY - (settings.gapHeight * (0.8 + Math.random() * 0.9));
+            // Cap multiplier at 1.15 to ensure jumps (max height ~195) are always possible even on Hard (145 * 1.15 = 166)
+            return highestY - (settings.gapHeight * (0.8 + Math.random() * 0.35));
         }
         
         // 2. Recovery: If player fell far down, generate near player again

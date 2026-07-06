@@ -239,13 +239,11 @@ class Game {
         };
         
         registerImmediateClick('retry-button', () => {
-            if (this.adManager) this.adManager.showGameOverAd();
             document.getElementById('death-screen').classList.add('hidden');
             this.startGame(this.difficulty);
         });
         
         registerImmediateClick('home-button', () => {
-            if (this.adManager) this.adManager.showGameOverAd();
             this.showMainMenu();
         });
 
@@ -361,6 +359,7 @@ class Game {
         const updateControlUI = () => {
             if (touchBtn) touchBtn.classList.toggle('active', this.controlMode === 'touch');
             if (tiltBtn) tiltBtn.classList.toggle('active', this.controlMode === 'tilt');
+            this.updateMobileControlsVisibility();
         };
         updateControlUI();
 
@@ -370,8 +369,19 @@ class Game {
             localStorage.setItem('controlMode', 'touch');
             updateControlUI();
         };
-        if (tiltBtn) tiltBtn.onclick = () => {
+        if (tiltBtn) tiltBtn.onclick = async (e) => {
             uiClick();
+            if (e) e.preventDefault();
+
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                try {
+                    const permission = await DeviceOrientationEvent.requestPermission();
+                    console.log("Orientation permission result:", permission);
+                } catch (err) {
+                    console.warn("Orientation permission request failed:", err);
+                }
+            }
+
             this.controlMode = 'tilt';
             localStorage.setItem('controlMode', 'tilt');
             updateControlUI();
@@ -522,6 +532,25 @@ class Game {
         console.log(`Showing Overlay: ${id}`);
     }
 
+    updateMobileControlsVisibility() {
+        const mc = document.getElementById('mobile-controls');
+        if (!mc) return;
+
+        if (this.gameState === 'PLAYING' && !this.isGameOver && !this.isAdPlaying) {
+            mc.classList.remove('hidden');
+            const controlsLeft = mc.querySelector('.controls-left');
+            if (controlsLeft) {
+                if (this.controlMode === 'tilt') {
+                    controlsLeft.classList.add('hidden');
+                } else {
+                    controlsLeft.classList.remove('hidden');
+                }
+            }
+        } else {
+            mc.classList.add('hidden');
+        }
+    }
+
     showMainMenu() {
         this.gameState = 'MENU';
         this.isGameOver = true;
@@ -575,7 +604,7 @@ class Game {
         
         document.getElementById('difficulty-screen').classList.add('hidden');
         document.getElementById('ui-overlay').classList.remove('hidden');
-        document.getElementById('mobile-controls').classList.remove('hidden');
+        this.updateMobileControlsVisibility();
         document.getElementById('home-header').classList.add('hidden');
         document.querySelectorAll('.floating-fab').forEach(el => el.classList.add('hidden'));
         document.body.classList.remove('menu-open');
@@ -813,7 +842,7 @@ class Game {
         
         document.getElementById('death-screen').classList.remove('hidden');
         document.getElementById('ui-overlay').classList.add('hidden');
-        document.getElementById('mobile-controls').classList.add('hidden');
+        this.updateMobileControlsVisibility();
         this.vibrate([100, 50, 100]); // Intense pattern for death
         
         // Update stats
@@ -866,7 +895,7 @@ class Game {
             // Restore HUD
             document.getElementById('death-screen').classList.add('hidden');
             document.getElementById('ui-overlay').classList.remove('hidden');
-            if (this.controlMode === 'touch') document.getElementById('mobile-controls').classList.remove('hidden');
+            this.updateMobileControlsVisibility();
         }
     }
 

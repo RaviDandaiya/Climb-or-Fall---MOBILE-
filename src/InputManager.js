@@ -63,8 +63,6 @@ export class InputManager {
             }
         });
 
-        // Control mode toggles
-        this.setupControlModeToggles();
         // Game mode toggles
         this.setupGameModeToggles();
     }
@@ -132,52 +130,6 @@ export class InputManager {
         
         // Prevent default touch behavior (like scrolling) on the joystick
         base.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
-    }
-
-    setupControlModeToggles() {
-        const game = this.game;
-        const btnTouch = document.getElementById('btn-touch-mode');
-        const btnTilt = document.getElementById('btn-tilt-mode');
-        const mc = document.getElementById('mobile-controls');
-
-        if (!btnTouch || !btnTilt) return;
-
-        if (game.controlMode === 'tilt') {
-            btnTouch.classList.remove('active');
-            btnTilt.classList.add('active');
-            if (mc) mc.style.display = 'none';
-        }
-
-        btnTouch.onclick = () => {
-            game.controlMode = 'touch';
-            localStorage.setItem('controlMode', 'touch');
-            btnTouch.classList.add('active');
-            btnTilt.classList.remove('active');
-            if (mc) mc.style.display = 'flex';
-        };
-
-        btnTilt.onclick = async (e) => {
-            console.log("Tilt selection triggered");
-            if (e) e.preventDefault();
-            
-            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                try { 
-                    const permission = await DeviceOrientationEvent.requestPermission();
-                    console.log("Orientation permission result:", permission);
-                } catch (err) { 
-                    console.warn("Tilt permission request failed:", err);
-                }
-            }
-            
-            game.controlMode = 'tilt';
-            localStorage.setItem('controlMode', 'tilt');
-            
-            // Visual Update
-            btnTilt.classList.add('active');
-            btnTouch.classList.remove('active');
-            
-            if (mc) mc.style.display = 'none';
-        };
     }
 
     setupGameModeToggles() {

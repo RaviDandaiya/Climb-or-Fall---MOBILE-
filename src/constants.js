@@ -17,9 +17,9 @@ export const THEMES = [
 ];
 
 export const DIFFICULTY_SETTINGS = {
-    easy: { lavaSpeed: 0.4, gapHeight: 100, platformWidth: 160, hazardChance: 0.05, pillarChance: 0.02 },
-    medium: { lavaSpeed: 0.65, gapHeight: 125, platformWidth: 130, hazardChance: 0.12, pillarChance: 0.05 },
-    hard: { lavaSpeed: 0.9, gapHeight: 145, platformWidth: 100, hazardChance: 0.22, pillarChance: 0.1 }
+    easy: { lavaSpeed: 0.4, gapHeight: 90, platformWidth: 170, hazardChance: 0.05, pillarChance: 0.02 },
+    medium: { lavaSpeed: 0.65, gapHeight: 115, platformWidth: 140, hazardChance: 0.12, pillarChance: 0.05 },
+    hard: { lavaSpeed: 0.9, gapHeight: 135, platformWidth: 110, hazardChance: 0.22, pillarChance: 0.1 }
 };
 
 export const SKINS = [
